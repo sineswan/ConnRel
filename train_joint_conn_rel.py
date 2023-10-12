@@ -307,14 +307,18 @@ def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc
 
 def main():
     args = get_argparse().parse_args()
+    cuda_available = False
     if torch.cuda.is_available():
+        #if False:  #SKIP GPU
         args.n_gpu = 1
         device = torch.device("cuda:0")
+        cuda_available = True
     else:
         device = torch.device("cpu")
         args.n_gpu = 0
     args.device = device
     logger.info("Training/evaluation parameters %s", args)
+    logger.info(f"Cuda available: {cuda_available}")
     set_seed(args.seed)
 
     ## 1. prepare data

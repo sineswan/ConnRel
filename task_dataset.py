@@ -83,13 +83,13 @@ class RobertaBaseDataset(Dataset):
                     tokens = tokens + ["</s>"]
                     token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
                     label_id = self.label_list.index(relation_class)
-                    possible_label_ids = np.zeros(len(self.label_list), dtype=np.int)
+                    possible_label_ids = np.zeros(len(self.label_list), dtype=np.int_)
                     for label in possible_relation_classes:
                         possible_label_ids[self.label_list.index(label)] = 1
 
                     # padding
-                    input_ids = np.ones(self.max_seq_length, dtype=np.int)
-                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int)
+                    input_ids = np.ones(self.max_seq_length, dtype=np.int_)
+                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     input_ids = input_ids * self.tokenizer.pad_token_id
                     input_ids[:len(token_ids)] = token_ids
                     attention_mask[:len(token_ids)] = 1
@@ -186,7 +186,7 @@ class ConnRobertaBaseDataset(Dataset):
                         conn_id = self.conn_list.index(connectives)
                     else:
                         conn_id = self.conn_list.index("<unk>")
-                    possible_conn_ids = np.zeros(len(self.conn_list), dtype=np.int)
+                    possible_conn_ids = np.zeros(len(self.conn_list), dtype=np.int_)
                     for conn in possible_connectives:
                         if conn in self.conn_list:
                             tmp_idx = self.conn_list.index(conn)
@@ -195,8 +195,8 @@ class ConnRobertaBaseDataset(Dataset):
                         possible_conn_ids[tmp_idx] = 1
 
                     # padding
-                    input_ids = np.ones(self.max_seq_length, dtype=np.int)
-                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int)
+                    input_ids = np.ones(self.max_seq_length, dtype=np.int_)
+                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     input_ids = input_ids * self.tokenizer.pad_token_id
                     input_ids[:len(token_ids)] = token_ids
                     attention_mask[:len(token_ids)] = 1
@@ -307,13 +307,13 @@ class JointRobertaBaseDataset(Dataset):
                     else:
                         conn_id = self.connective_list.index("<unk>")
                     label_id = self.label_list.index(relation_class)
-                    possible_label_ids = np.zeros(len(self.label_list), dtype=np.int)
+                    possible_label_ids = np.zeros(len(self.label_list), dtype=np.int_)
                     for label in possible_relation_classes:
                         possible_label_ids[self.label_list.index(label)] = 1
 
                     # padding
-                    input_ids = np.ones(self.max_seq_length, dtype=np.int)
-                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int)
+                    input_ids = np.ones(self.max_seq_length, dtype=np.int_)
+                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     input_ids = input_ids * self.tokenizer.pad_token_id
                     input_ids[:len(token_ids)] = token_ids
                     attention_mask[:len(token_ids)] = 1
@@ -418,13 +418,13 @@ class MultiTaskDataset(Dataset):
                     else:
                         conn_id = self.connective_list.index("<unk>")
                     label_ids = self.label_list.index(relation_class)
-                    possible_label_ids = np.zeros(len(self.label_list), dtype=np.int)
+                    possible_label_ids = np.zeros(len(self.label_list), dtype=np.int_)
                     for label in possible_relation_classes:
                         possible_label_ids[self.label_list.index(label)] = 1
 
                     # padding
-                    input_ids = np.ones(self.max_seq_length, dtype=np.int)
-                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int)
+                    input_ids = np.ones(self.max_seq_length, dtype=np.int_)
+                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     input_ids = input_ids * self.tokenizer.pad_token_id
                     input_ids[:len(token_ids)] = token_ids
                     attention_mask[:len(token_ids)] = 1
@@ -528,19 +528,19 @@ class AdversarialDataset(Dataset):
                     arg_token_ids = self.tokenizer.convert_tokens_to_ids(arg_tokens)
 
                     label_ids = self.label_list.index(relation_class)
-                    possible_label_ids = np.zeros(len(self.label_list), dtype=np.int)
+                    possible_label_ids = np.zeros(len(self.label_list), dtype=np.int_)
                     for label in possible_relation_classes:
                         possible_label_ids[self.label_list.index(label)] = 1
 
                     # padding
-                    input_ids = np.ones(self.max_seq_length, dtype=np.int)
-                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int)
+                    input_ids = np.ones(self.max_seq_length, dtype=np.int_)
+                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     input_ids = input_ids * self.tokenizer.pad_token_id
                     input_ids[:len(token_ids)] = token_ids
                     attention_mask[:len(token_ids)] = 1
 
-                    arg_input_ids = np.ones(self.max_seq_length, dtype=np.int)
-                    arg_attention_mask = np.zeros(self.max_seq_length, dtype=np.int)
+                    arg_input_ids = np.ones(self.max_seq_length, dtype=np.int_)
+                    arg_attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     arg_input_ids = arg_input_ids * self.tokenizer.pad_token_id
                     arg_input_ids[:len(arg_token_ids)] = arg_token_ids
                     arg_attention_mask[:len(arg_token_ids)] = 1
