@@ -203,10 +203,10 @@ checkpoint = "roberta-base"  #similar to RoBERTa
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 def truncate(text, max_length=512):
     transformer_tokenisation = tokenizer(text)
-    length = len(transformer_tokenisation)
-    print(f"max: {max_length}, this: {length}, text: {text}")
+    length = len(transformer_tokenisation["input_ids"])
+    print(f"max: {max_length}, this: {length}")
     if length > max_length:
-        print(f"Max length exceeded: {length}")
+        print(f"Max length exceeded: {length}, text: {text}")
         raise Exception()
 
     return text
