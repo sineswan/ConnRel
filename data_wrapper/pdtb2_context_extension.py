@@ -205,9 +205,9 @@ def truncate(text, max_length=512):
     truncated_text = text
     transformer_tokenisation = tokenizer(truncated_text)
     length = len(transformer_tokenisation["input_ids"])
-    print(f"max: {max_length}, this: {length}")
+    org_length = length
     while length > max_length:
-        first_space = text.find(" ")
+        first_space = text.find(" ")   #crucially, finds left-most (first) space.  Truncation happens from earliest point.
         if first_space == -1:
             #can't segment on word boundaries any more.
             break
@@ -226,7 +226,9 @@ def truncate(text, max_length=512):
     if not text == truncated_text:
         print(f"Truncated text: success: {length}")
 
-    return truncated_text
+    truncation_length = org_length - length
+
+    return truncated_text, truncation_length
 
 def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir):
     """
@@ -311,7 +313,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir):
             #Add context
             sample["context"] = annotations[i]["context"]["raw"]
             new_string = sample["context"]+" "+sample["arg1"]
-            sample['arg1'] = truncate(new_string)
+            sample['arg1'], sample['truncation_length'] = truncate(new_string)
 
             result.append(sample)
 
