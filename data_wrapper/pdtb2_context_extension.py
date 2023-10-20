@@ -204,7 +204,7 @@ tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 def truncate(text, max_length=512):
     transformer_tokenisation = tokenizer(text)
     length = len(transformer_tokenisation)
-    print(f"max: {max_length}, this: {length}")
+    print(f"max: {max_length}, this: {length}, text: {text}")
     if length > max_length:
         print(f"Max length exceeded: {length}")
         raise Exception()
