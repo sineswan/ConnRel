@@ -224,7 +224,7 @@ def truncate(text, max_length=512):
         raise Exception()
 
     if not text == truncated_text:
-        print(f"Truncated text: success: {length}")
+        print(f"Truncated text: success: {length} from {org_length}")
 
     truncation_length = org_length - length
 
