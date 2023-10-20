@@ -293,7 +293,8 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir):
             sample['arg1_org'] = sample['arg1']
             #Add context
             sample["context"] = annotations[i]["context"]["raw"]
-            sample['arg1'] = truncate(sample["context"]+" "+sample["arg1"])
+            new_string = sample["context"]+" "+sample["arg1"]
+            sample['arg1'] = truncate(new_string)
 
             result.append(sample)
 
