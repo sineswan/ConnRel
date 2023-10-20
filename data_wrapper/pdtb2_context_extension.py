@@ -202,14 +202,31 @@ from transformers import AutoTokenizer
 checkpoint = "roberta-base"  #similar to RoBERTa
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 def truncate(text, max_length=512):
-    transformer_tokenisation = tokenizer(text)
+    truncated_text = text
+    transformer_tokenisation = tokenizer(truncated_text)
     length = len(transformer_tokenisation["input_ids"])
     print(f"max: {max_length}, this: {length}")
+    while length > max_length:
+        first_space = text.find(" ")
+        if first_space == -1:
+            #can't segment on word boundaries any more.
+            break
+        else:
+            truncated_text = text[first_space+1:]   #+1 because we want the next char after the space.
+
+            #calculate
+            transformer_tokenisation = tokenizer(truncated_text)
+            length = len(transformer_tokenisation["input_ids"])
+
+    #check to see if length still needs fixing
     if length > max_length:
-        print(f"Max length exceeded: {length}, text: {text}")
+        print(f"Max length exceeded: {length}, text: {truncated_text}")
         raise Exception()
 
-    return text
+    if not text == truncated_text:
+        print(f"Truncated text: success: {length}")
+
+    return truncated_text
 
 def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir):
     """
