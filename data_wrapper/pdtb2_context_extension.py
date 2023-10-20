@@ -212,7 +212,7 @@ def truncate(text, max_length=512):
             #can't segment on word boundaries any more.
             break
         else:
-            truncated_text = text[first_space+1:]   #+1 because we want the next char after the space.
+            truncated_text = truncated_text[first_space+1:]   #+1 because we want the next char after the space.
 
             #calculate
             transformer_tokenisation = tokenizer(truncated_text)
