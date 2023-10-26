@@ -361,13 +361,16 @@ def main():
     model = model.to(args.device)
 
     ## 3. prepare dataset
+
+    #stephen-wan: adding flag to capture left-right truncation preference.
     dataset_params = {
         "relation_type": args.relation_type,
         "tokenizer": tokenizer,
         "max_seq_length": args.max_seq_length,
         "label_list": label_list,
         "label_level": label_level,
-        "connective_list": conn_list
+        "connective_list": conn_list,
+        "FLAG_truncate_right":True
     }
 
     if args.do_train:

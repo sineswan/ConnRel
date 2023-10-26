@@ -256,6 +256,7 @@ class JointRobertaBaseDataset(Dataset):
         self.label_list = params["label_list"]
         self.label_level = params["label_level"] - 1 # start from 0
         self.connective_list = params["connective_list"]
+        self.FLAG_truncate_right = params["FLAG_truncate_right"]
 
         self.init_np_dataset()
 
@@ -296,11 +297,22 @@ class JointRobertaBaseDataset(Dataset):
                     tokens_1 = self.tokenizer.tokenize(arg1)
                     tokens_2 = self.tokenizer.tokenize(arg2)
                     tokens = ["<s>"] + tokens_1 + ["<mask>"] + tokens_2
+
+
                     if len(tokens) > self.max_seq_length - 1:
-                        tokens = tokens[:self.max_seq_length - 1]
+                        if self.FLAG_truncate_right:
+                            tokens = tokens[:self.max_seq_length - 1]
+                        else:
+                            tokens = tokens[-self.max_seq_length:]  #SW: array slicing to get last n chars of string
+
                     tokens = tokens + ["</s>"]
                     token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
-                    mask_position_id = len(tokens_1) + 1
+
+                    #SW: need to set mask index according to truncation side
+                    mask_position_id = len(tokens_1) + 1    #SW: default right truncation
+                    if not self.FLAG_truncate_right:
+                        mask_position_id = len(tokens) - len(tokens_2)
+
                     assert mask_position_id < self.max_seq_length, (mask_position_id, self.max_seq_length)
                     if connectives in self.connective_list:
                         conn_id = self.connective_list.index(connectives)
