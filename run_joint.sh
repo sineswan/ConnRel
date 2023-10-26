@@ -16,7 +16,9 @@ do
                                     --dataset="pdtb2" \
                                     --label_file="labels_level_1.txt" \
                                     --sample_k=100 \
-                                    --truncation_side_right=0
+                                    --truncation_side_right=0 \
+                                    --train_batch_size=2 \
+                                    --max_seq_length=512 \
                                     --seed=${seed}
 done
 # COMMENT
