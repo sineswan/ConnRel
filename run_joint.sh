@@ -16,6 +16,7 @@ do
                                     --dataset="pdtb2" \
                                     --label_file="labels_level_1.txt" \
                                     --sample_k=100 \
+                                    --truncation_side_right=0
                                     --seed=${seed}
 done
 # COMMENT

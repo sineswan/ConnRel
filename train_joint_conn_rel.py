@@ -71,7 +71,7 @@ def get_argparse():
     parser.add_argument("--seed", default=106524, type=int, help="random seed")
 
     #SW: adding parameter to control truncation side.  Needed if padding with context.
-    parser.add_argument("--truncation_side_right", default=True, help="True if we truncate the end of string")
+    parser.add_argument("--truncation_side_right", default=1, type=int, help="1 if we truncate the end of string")
 
     return parser
 
@@ -366,6 +366,7 @@ def main():
     ## 3. prepare dataset
 
     #stephen-wan: adding flag to capture left-right truncation preference.
+    FLAG_truncation_right = args.truncation_side_right==1
     dataset_params = {
         "relation_type": args.relation_type,
         "tokenizer": tokenizer,
@@ -373,7 +374,7 @@ def main():
         "label_list": label_list,
         "label_level": label_level,
         "connective_list": conn_list,
-        "FLAG_truncate_right":True
+        "FLAG_truncate_right":FLAG_truncation_right
     }
 
     if args.do_train:
