@@ -70,6 +70,9 @@ def get_argparse():
     parser.add_argument("--max_grad_norm", default=2.0, type=float)
     parser.add_argument("--seed", default=106524, type=int, help="random seed")
 
+    #SW: adding parameter to control truncation side.  Needed if padding with context.
+    parser.add_argument("--truncation_side_right", default=True, help="True if we truncate the end of string")
+
     return parser
 
 def set_seed(seed):
