@@ -303,7 +303,7 @@ class JointRobertaBaseDataset(Dataset):
                         if self.FLAG_truncate_right:
                             tokens = tokens[:self.max_seq_length - 1]
                         else:
-                            tokens = tokens[-self.max_seq_length:]  #SW: array slicing to get last n chars of string
+                            tokens = tokens[-self.max_seq_length +1 :]  #SW: array slicing to get last n chars of string
 
                     tokens = tokens + ["</s>"]
                     token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
@@ -327,8 +327,13 @@ class JointRobertaBaseDataset(Dataset):
                     input_ids = np.ones(self.max_seq_length, dtype=np.int_)
                     attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     input_ids = input_ids * self.tokenizer.pad_token_id
-                    input_ids[:len(token_ids)] = token_ids
-                    attention_mask[:len(token_ids)] = 1
+
+                    if self.FLAG_truncate_right:
+                        input_ids[:len(token_ids)] = token_ids
+                        attention_mask[:len(token_ids)] = 1
+                    else:
+                        input_ids[-len(token_ids):] = token_ids
+                        attention_mask[-len(token_ids):] = 1
 
                     all_input_ids.append(input_ids)
                     all_attention_mask.append(attention_mask)
