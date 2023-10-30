@@ -222,13 +222,13 @@ def add_context(annotations, raw_text):
                 for dep_id in arg2s[arg1]:
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
                     dep_context.append(prior_arg)
-                annotations["context"]["chained"] = dep_context
-                annotations["context"]["chained_source_ids"] = arg2s[arg1]
+                annotation["context"]["chained"] = dep_context
+                annotation["context"]["chained_source_ids"] = arg2s[arg1]
 
             else:
                 print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
-                annotations["context"]["chained"] = []
-                annotations["context"]["chained_source_ids"] = []
+                annotation["context"]["chained"] = []
+                annotation["context"]["chained_source_ids"] = []
 
 
 
