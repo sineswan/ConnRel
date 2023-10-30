@@ -376,7 +376,7 @@ if __name__ == "__main__":
     ## 1. Ji split
     parser = argparse.ArgumentParser()
     parser.add_argument("--pdtb2_raw_text_dir", default=None)
-    parser.add_argument("--context_mode", default=0)
+    parser.add_argument("--context_mode", type=int, default=0)
     args = parser.parse_args()
     pdtb2_raw_text_dir = args.pdtb2_raw_text_dir
     context_mode = args.context_mode

@@ -360,7 +360,8 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                 sample["context"] = annotations[i]["context"]["raw"]
 
             #MODE 1: Context== most recent (single) relationship where this sent/arg was an ARG2
-            elif mode==1:
+            else:
+                #mode==1:
                 some_context = ""
                 if len(annotations[i]["context"]["chained"]) > 0:
                     some_context = annotations[i]["context"]["chained"][-1]
