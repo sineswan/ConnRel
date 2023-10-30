@@ -186,15 +186,15 @@ def add_context(annotations, raw_text, FLAG_find_context_dependents=True):
         #save args to internal dicts
         arg1 = annotation[R_ARG1]["arg_text"]
         arg2 = annotation[R_ARG2]["arg_text"]
-        if arg1 in arg1s.keys():
-            raise  Exception("Duplicate arg1 key: {arg1}")
+        if not arg1 in arg1s.keys():
+            arg1s[arg1] = [i]
         else:
-            arg1s[arg1] = i
+            arg1s[arg1].append(i)
 
-        if arg2 in arg2s.keys():
-            raise  Exception("Duplicate arg2 key: {arg2}")
+        if not arg2 in arg2s.keys():
+            arg2s[arg2] = [i]
         else:
-            arg2s[arg2] = i
+            arg2s[arg2].append(i)
 
 
         if raw_text:   #so assuming there's original content to get context
@@ -213,8 +213,9 @@ def add_context(annotations, raw_text, FLAG_find_context_dependents=True):
 
         if FLAG_find_context_dependents:
             if arg1 in arg2s.keys():
-                dependency = annotations[arg2s[arg1]]
-                print(f"FOUND prior dependency: ARG1: {arg1}, dependency: {dependency}")
+                for dependency_id in arg2s[arg1]:
+                    dependency = annotations[dependency_id]
+                    print(f"FOUND prior dependency: ARG1: {arg1}, dependency: {dependency}")
 
     return annotations
 
