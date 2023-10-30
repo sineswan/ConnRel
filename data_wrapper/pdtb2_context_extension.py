@@ -215,6 +215,8 @@ def add_context(annotations, raw_text, FLAG_find_context_dependents=True):
             if arg1 in arg2s.keys():
 
                 print(f"FOUND prior dependency: ARG1: {arg1}, dependencies: {arg2s[arg1]}")
+            else:
+                print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
 
 
 
