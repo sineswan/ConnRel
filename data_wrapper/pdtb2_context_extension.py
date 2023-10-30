@@ -358,7 +358,6 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
             #Mode 0: Context== all preceding leading up to ARG1
             if mode==0:
                 sample["context"] = annotations[i]["context"]["raw"]
-                new_string = sample["context"]+" "+sample["arg1"]
 
             #MODE 1: Context== most recent (single) relationship where this sent/arg was an ARG2
             elif mode==1:
@@ -367,10 +366,10 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                     some_context = annotations[i]["context"]["chained"][-1]
 
                 sample["context"] = some_context
-                new_string = sample["context"] + " " + sample["arg1"]
                 sample["context_provenance"] = annotations[i]["context"]
 
             #Apply truncation regardless of context mode type
+            new_string = sample["context"] + " " + sample["arg1"]
             sample['arg1'], sample['truncation_length'] = truncate(new_string)
 
             #finalise result
