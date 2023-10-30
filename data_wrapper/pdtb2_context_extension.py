@@ -197,25 +197,26 @@ def add_context(annotations, raw_text, FLAG_find_context_dependents=True):
             arg2s[arg2].append(i)
 
 
-        if raw_text:   #so assuming there's original content to get context
-
-            # Find the earliest point to trackback to find context
-            arg1_start = annotation[R_ARG1]["arg_span_list"][0][0] #1st element, 1st offset
-            arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
-
-            # print(f"Arg start chars: {arg1_start} {arg2_start}")
-            arg_start_min = min(arg1_start, arg2_start)
-            # print(f"min: {arg_start_min}")
-            context = raw_text[:arg_start_min]
-
-            # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
-            annotation["context"] = {"raw":context}
+        # if raw_text:   #so assuming there's original content to get context
+        #
+        #     # Find the earliest point to trackback to find context
+        #     arg1_start = annotation[R_ARG1]["arg_span_list"][0][0] #1st element, 1st offset
+        #     arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
+        #
+        #     # print(f"Arg start chars: {arg1_start} {arg2_start}")
+        #     arg_start_min = min(arg1_start, arg2_start)
+        #     # print(f"min: {arg_start_min}")
+        #     context = raw_text[:arg_start_min]
+        #
+        #     # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
+        #     annotation["context"] = {"raw":context}
 
         if FLAG_find_context_dependents:
             if arg1 in arg2s.keys():
-                for dependency_id in arg2s[arg1]:
-                    dependency = annotations[dependency_id]
-                    print(f"FOUND prior dependency: ARG1: {arg1}, dependency: {dependency}")
+
+                print(f"FOUND prior dependency: ARG1: {arg1}, dependencies: {arg2s[arg1]}")
+
+
 
     return annotations
 
