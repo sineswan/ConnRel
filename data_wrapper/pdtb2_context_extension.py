@@ -196,7 +196,7 @@ def add_context(annotations, raw_text):
         else:
             arg2s[arg2].append(i)
 
-        annotations["context"] = {}
+        annotation["context"] = {}
         #Mode 0
         if raw_text:   #so assuming there's original content to get context
 
