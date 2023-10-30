@@ -174,7 +174,7 @@ def read_raw(filename):
         text = file.read()
     return text
 
-def add_context(annotations, raw_text, FLAG_find_context_dependents=True):
+def add_context(annotations, raw_text):
 
     #assuming annotations are in order
     arg1s = {}
@@ -196,27 +196,39 @@ def add_context(annotations, raw_text, FLAG_find_context_dependents=True):
         else:
             arg2s[arg2].append(i)
 
+        annotations["context"] = {}
+        #Mode 0
         if raw_text:   #so assuming there's original content to get context
 
             context = ""
-            # # Find the earliest point to trackback to find context
-            # arg1_start = annotation[R_ARG1]["arg_span_list"][0][0] #1st element, 1st offset
-            # arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
-            #
-            # # print(f"Arg start chars: {arg1_start} {arg2_start}")
-            # arg_start_min = min(arg1_start, arg2_start)
-            # # print(f"min: {arg_start_min}")
-            # context = raw_text[:arg_start_min]
+            # Find the earliest point to trackback to find context
+            arg1_start = annotation[R_ARG1]["arg_span_list"][0][0] #1st element, 1st offset
+            arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
 
-            # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
-            annotation["context"] = {"raw":context}
+            # print(f"Arg start chars: {arg1_start} {arg2_start}")
+            arg_start_min = min(arg1_start, arg2_start)
+            # print(f"min: {arg_start_min}")
+            context = raw_text[:arg_start_min]
 
-        if FLAG_find_context_dependents:
+            print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
+            annotation["context"]["raw"] = context
+
+        #Mode 1
+        if True:
             if arg1 in arg2s.keys():
-
                 print(f"FOUND prior dependency: ARG1: {arg1}, dependencies: {arg2s[arg1]}")
+
+                dep_context = []
+                for dep_id in arg2s[arg1]:
+                    prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
+                    dep_context.append(prior_arg)
+                annotations["context"]["chained"] = dep_context
+                annotations["context"]["chained_source_ids"] = arg2s[arg1]
+
             else:
                 print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
+                annotations["context"]["chained"] = []
+                annotations["context"]["chained_source_ids"] = []
 
 
 
@@ -257,9 +269,13 @@ def truncate(text, max_length=512):
 
     return truncated_text, truncation_length
 
-def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir):
+def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
     """
     This method intercepts the "cur_samples" data structure and adds extra context information to the samples.
+
+    Modes:
+    0: use the raw context where offsets use to find all preceding text leading up to ARG1
+    1: use the *last* (most recent) immediate context, where a relationship was annotated.
     """
 
     # This method relies on the original data reading code of ConnRel (ACL 2023)
@@ -291,7 +307,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir):
     raw_contents = read_raw(raw_text_filepath)
 
     #STEP 4. Extract context
-    annotations = add_context(annotations, raw_contents)
+    annotations = add_context(annotations, raw_contents, mode=mode)
 
     #STEP 5. integrate results with the original dicts.
     result = []
@@ -338,10 +354,26 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir):
             sample['filestub'] = file_stub
             sample['arg1_org'] = sample['arg1']
             #Add context
-            sample["context"] = annotations[i]["context"]["raw"]
-            new_string = sample["context"]+" "+sample["arg1"]
+
+            #Mode 0: Context== all preceding leading up to ARG1
+            if mode==0:
+                sample["context"] = annotations[i]["context"]["raw"]
+                new_string = sample["context"]+" "+sample["arg1"]
+
+            #MODE 1: Context== most recent (single) relationship where this sent/arg was an ARG2
+            elif mode==1:
+                some_context = ""
+                if len(annotations[i]["context"]["chained"]) > 0:
+                    some_context = annotations[i]["context"]["chained"][-1]
+
+                sample["context"] = some_context
+                new_string = sample["context"] + " " + sample["arg1"]
+                sample["context_provenance"] = annotations[i]["context"]
+
+            #Apply truncation regardless of context mode type
             sample['arg1'], sample['truncation_length'] = truncate(new_string)
 
+            #finalise result
             result.append(sample)
 
     return result
