@@ -307,7 +307,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
     raw_contents = read_raw(raw_text_filepath)
 
     #STEP 4. Extract context
-    annotations = add_context(annotations, raw_contents, mode=mode)
+    annotations = add_context(annotations, raw_contents)
 
     #STEP 5. integrate results with the original dicts.
     result = []
