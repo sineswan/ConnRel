@@ -85,7 +85,7 @@ def get_arg(sample_lines, arg_name):
     return result
 
 def pdtb2_sample_reader(sample_lines):
-    """ Rewritten version of Wei Liu's oode to extract more contextual information """
+    """ Rewritten version of Wei Liu's code to extract more contextual information """
 
     block = {}    #will be a dict of fields for this row/datum
 
@@ -174,10 +174,28 @@ def read_raw(filename):
         text = file.read()
     return text
 
-def add_context(annotations, raw_text):
+def add_context(annotations, raw_text, FLAG_find_context_dependents=True):
 
-    for annotation in annotations:
+    #assuming annotations are in order
+    arg1s = {}
+    arg2s = {}
+
+    for i,annotation in enumerate(annotations):
         annotation["context"] = None
+
+        #save args to internal dicts
+        arg1 = annotation[R_ARG1]["arg_text"]
+        arg2 = annotation[R_ARG2]["arg_text"]
+        if arg1 in arg1s.keys():
+            raise  Exception("Duplicate arg1 key: {arg1}")
+        else:
+            arg1s[arg1] = i
+
+        if arg2 in arg2s.keys():
+            raise  Exception("Duplicate arg2 key: {arg2}")
+        else:
+            arg2s[arg2] = i
+
 
         if raw_text:   #so assuming there's original content to get context
 
@@ -192,6 +210,11 @@ def add_context(annotations, raw_text):
 
             # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
             annotation["context"] = {"raw":context}
+
+        if FLAG_find_context_dependents:
+            if arg1 in arg2s.keys():
+                dependency = annotations[arg2s[arg1]]
+                print(f"FOUND prior dependency: ARG1: {arg1}, dependency: {dependency}")
 
     return annotations
 
