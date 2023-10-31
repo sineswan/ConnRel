@@ -313,6 +313,8 @@ class JointRobertaBaseDataset(Dataset):
                     if not self.FLAG_truncate_right:
                         mask_position_id = len(tokens) - len(tokens_2)
 
+                    print(f"Mask token: {tokens[mask_position_id]}")
+
                     assert mask_position_id < self.max_seq_length, (mask_position_id, self.max_seq_length)
                     if connectives in self.connective_list:
                         conn_id = self.connective_list.index(connectives)
@@ -328,17 +330,17 @@ class JointRobertaBaseDataset(Dataset):
                     attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     input_ids = input_ids * self.tokenizer.pad_token_id
 
-                    # #SW: Padding always on the right, regardless of truncation side.
-                    # input_ids[:len(token_ids)] = token_ids
-                    # attention_mask[:len(token_ids)] = 1
+                    #SW: Padding always on the right, regardless of truncation side.
+                    input_ids[:len(token_ids)] = token_ids
+                    attention_mask[:len(token_ids)] = 1
 
-                    #SW: adding truncation left/right handling for padding.
-                    if self.FLAG_truncate_right:
-                        input_ids[:len(token_ids)] = token_ids
-                        attention_mask[:len(token_ids)] = 1
-                    else:
-                        input_ids[-len(token_ids):] = token_ids
-                        attention_mask[-len(token_ids):] = 1
+                    # #SW: adding truncation left/right handling for padding.
+                    # if self.FLAG_truncate_right:
+                    #     input_ids[:len(token_ids)] = token_ids
+                    #     attention_mask[:len(token_ids)] = 1
+                    # else:
+                    #     input_ids[-len(token_ids):] = token_ids
+                    #     attention_mask[-len(token_ids):] = 1
 
 
                     all_input_ids.append(input_ids)
