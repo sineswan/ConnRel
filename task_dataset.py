@@ -313,7 +313,7 @@ class JointRobertaBaseDataset(Dataset):
                     if not self.FLAG_truncate_right:
                         mask_position_id = len(tokens) - len(tokens_2)
 
-                    print(f"Mask token: {tokens[mask_position_id]}, others: {tokens[mask_position_id -1: mask_position_id +1]}")
+                    print(f"Mask token: {tokens[mask_position_id]}, others: {tokens[mask_position_id -2: mask_position_id +2]}")
 
                     assert mask_position_id < self.max_seq_length, (mask_position_id, self.max_seq_length)
                     if connectives in self.connective_list:
