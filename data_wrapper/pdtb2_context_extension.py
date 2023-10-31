@@ -218,8 +218,11 @@ def add_context(annotations, raw_text):
             if arg1 in arg2s.keys():
                 print(f"FOUND prior dependency: ARG1: {arg1}, dependencies: {arg2s[arg1]}")
 
+
                 dep_context = []
                 for dep_id in arg2s[arg1]:
+                    print(f"prior {annotations[dep_id}")
+
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
                     prior_connective = annotations[dep_id]["conn"]
 
