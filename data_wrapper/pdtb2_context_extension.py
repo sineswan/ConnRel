@@ -221,7 +221,7 @@ def add_context(annotations, raw_text):
 
                 dep_context = []
                 for dep_id in arg2s[arg1]:
-                    print(f"prior {annotations[dep_id}")
+                    print(f"prior {annotations[dep_id]}")
 
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
                     prior_connective = annotations[dep_id]["conn"]
