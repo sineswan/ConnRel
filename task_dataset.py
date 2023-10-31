@@ -333,12 +333,11 @@ class JointRobertaBaseDataset(Dataset):
                     attention_mask[:len(token_ids)] = 1
 
                     #SW: adding truncation left/right handling for padding.
-                    # if self.FLAG_truncate_right:
-                    #     input_ids[:len(token_ids)] = token_ids
-                    #     attention_mask[:len(token_ids)] = 1
-                    # else:
-                    #     input_ids[-len(token_ids):] = token_ids
-                    #     attention_mask[-len(token_ids):] = 1
+                    if self.FLAG_truncate_right:
+                        input_ids[:len(token_ids)] = token_ids
+                    else:
+                        input_ids[-len(token_ids):] = token_ids
+
 
                     all_input_ids.append(input_ids)
                     all_attention_mask.append(attention_mask)
