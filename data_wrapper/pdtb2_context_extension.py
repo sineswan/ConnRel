@@ -221,7 +221,11 @@ def add_context(annotations, raw_text):
                 dep_context = []
                 for dep_id in arg2s[arg1]:
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
-                    dep_context.append(prior_arg)
+                    prior_connective = annotations[dep_id]["conn"]
+
+                    print(f"prior connective")
+
+                    dep_context.append(prior_arg+" "+prior_connective)
                 annotation["context"]["chained"] = dep_context
                 annotation["context"]["chained_source_ids"] = arg2s[arg1]
 
