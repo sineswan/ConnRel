@@ -186,7 +186,8 @@ def add_context(annotations, raw_text):
         R_ENTREL:0,
         R_IMPLICIT:0,
         R_EXPLICIT:0,
-        "other":0
+        R_NOREL:0,
+        R_ALTLEX:0
     }
 
     for i,annotation in enumerate(annotations):
