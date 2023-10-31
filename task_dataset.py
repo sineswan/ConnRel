@@ -311,7 +311,7 @@ class JointRobertaBaseDataset(Dataset):
                     #SW: need to set mask index according to truncation side
                     mask_position_id = len(tokens_1) + 1    #SW: default right truncation
                     if not self.FLAG_truncate_right:
-                        mask_position_id = len(tokens) - len(tokens_2)
+                        mask_position_id = len(tokens) - len(tokens_2) -2  #subtract 1 for "<s>", subtract 1 for 0-index
 
                     print(f"Mask token: {tokens[mask_position_id]}, others: {tokens[mask_position_id -2: mask_position_id +2]}")
 
