@@ -328,15 +328,17 @@ class JointRobertaBaseDataset(Dataset):
                     attention_mask = np.zeros(self.max_seq_length, dtype=np.int_)
                     input_ids = input_ids * self.tokenizer.pad_token_id
 
-                    #SW: Padding always on the right, regardless of truncation side.
-                    input_ids[:len(token_ids)] = token_ids
-                    attention_mask[:len(token_ids)] = 1
+                    # #SW: Padding always on the right, regardless of truncation side.
+                    # input_ids[:len(token_ids)] = token_ids
+                    # attention_mask[:len(token_ids)] = 1
 
                     #SW: adding truncation left/right handling for padding.
                     if self.FLAG_truncate_right:
                         input_ids[:len(token_ids)] = token_ids
+                        attention_mask[:len(token_ids)] = 1
                     else:
                         input_ids[-len(token_ids):] = token_ids
+                        attention_mask[-len(token_ids):] = 1
 
 
                     all_input_ids.append(input_ids)
