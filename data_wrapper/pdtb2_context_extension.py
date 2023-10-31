@@ -180,6 +180,15 @@ def add_context(annotations, raw_text):
     arg1s = {}
     arg2s = {}
 
+    mode1_stats = {
+        "found":0,
+        "not_found":0,
+        R_ENTREL:0,
+        R_IMPLICIT:0,
+        R_EXPLICIT:0,
+        "other":0
+    }
+
     for i,annotation in enumerate(annotations):
         annotation["context"] = None
 
@@ -217,15 +226,15 @@ def add_context(annotations, raw_text):
         if True:
             if arg1 in arg2s.keys():
                 print(f"FOUND prior dependency: ARG1: {arg1}, dependencies: {arg2s[arg1]}")
-
+                mode1_stats["found"] += 1
 
                 dep_context = []
                 for dep_id in arg2s[arg1]:
-                    print(f"prior {annotations[dep_id]}")
-
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
                     prior_connective = annotations[dep_id]["conn"]
                     prior_discourse_type = annotations[dep_id]["type"]
+
+                    mode1_stats[prior_discourse_type] += 1
 
                     if prior_discourse_type in annot_relation_strings:
                         print(f"prior connective: {prior_connective}")
@@ -237,9 +246,11 @@ def add_context(annotations, raw_text):
                 # print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
                 annotation["context"]["chained"] = []
                 annotation["context"]["chained_source_ids"] = []
+                mode1_stats["not_found"] += 1
 
 
 
+    print(f"mode1_stats: {mode1_stats}")
     return annotations
 
 
