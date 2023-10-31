@@ -210,7 +210,7 @@ def add_context(annotations, raw_text):
             # print(f"min: {arg_start_min}")
             context = raw_text[:arg_start_min]
 
-            print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
+            # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
             annotation["context"]["raw"] = context
 
         #Mode 1
@@ -225,15 +225,16 @@ def add_context(annotations, raw_text):
 
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
                     prior_connective = annotations[dep_id]["conn"]
+                    prior_discourse_type = annotations[dep_id]["type"]
 
-                    print(f"prior connective")
-
-                    dep_context.append(prior_arg+" "+prior_connective)
+                    if prior_discourse_type in annot_relation_strings:
+                        print(f"prior connective: {prior_connective}")
+                        dep_context.append(prior_arg+" "+prior_connective)
                 annotation["context"]["chained"] = dep_context
                 annotation["context"]["chained_source_ids"] = arg2s[arg1]
 
             else:
-                print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
+                # print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
                 annotation["context"]["chained"] = []
                 annotation["context"]["chained_source_ids"] = []
 
@@ -366,40 +367,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
     result = []
     for i,sample in enumerate(cur_samples):
 
-        #check args and type
-        sample_arg1 = sample["arg1"]
-        sample_arg2 = sample["arg2"]
-        sample_relation_type = sample["relation_type"]
-
-        contextual_arg1 = annotations[i][R_ARG1]["arg_text"]
-        contextual_arg2 = annotations[i][R_ARG2]["arg_text"]
-        contextual_relation_type = annotations[i]["type"][4:-4]  #strip off the "___" before and after in e.g.,"____EntRel____"
-
-        FLAG_checkgood = True
-        if not sample_arg1==contextual_arg1 or \
-            not sample_arg2==contextual_arg2 or \
-            not sample_relation_type==contextual_relation_type:
-            FLAG_checkgood = False
-
-        if not FLAG_checkgood:
-            error_string = "Error with: "
-            if not sample_arg1 == contextual_arg1:
-                print(f"sample_arg1:\n --{sample_arg1}--")
-                print(f"contextual_arg1:\n --{contextual_arg1}--")
-                error_string += " ARG1"
-            if not sample_arg2 == contextual_arg2:
-                print(f"sample_arg2:\n --{sample_arg2}--")
-                print(f"contextual_arg2:\n --{contextual_arg2}--")
-                error_string += " ARG2"
-            if not sample_relation_type == contextual_relation_type:
-                print(f"sample_rel:\n --{sample_relation_type}--")
-                print(f"contextual_rel:\n --{contextual_relation_type}--")
-                error_string += " REL"
-
-
-            print(f"NOT MATCHING: {error_string}")
-            raise Exception("Data points not aligned: "+error_string)
-        else:
+        if is_same_datapoint(sample, annotations[i]):
 
             #Add extra provenance data
             sample['id'] = f"{section_string}.{file_stub}.{i:03d}"
