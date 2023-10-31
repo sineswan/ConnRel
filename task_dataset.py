@@ -304,6 +304,7 @@ class JointRobertaBaseDataset(Dataset):
                             tokens = tokens[:self.max_seq_length - 1]
                         else:
                             tokens = tokens[-self.max_seq_length +1 :]  #SW: array slicing to get last n chars of string
+                            tokens[0] = "<s>"                           #SW: We truncate left, so need add new start <s>
 
                     tokens = tokens + ["</s>"]
                     token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
