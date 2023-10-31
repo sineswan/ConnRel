@@ -276,6 +276,39 @@ def truncate(text, max_length=512):
 
     return truncated_text, truncation_length
 
+def is_same_datapoint(point1, point2):
+    # check args and type
+    sample_arg1 = point1["arg1"]
+    sample_arg2 = point1["arg2"]
+    sample_relation_type = point1["relation_type"]
+
+    contextual_arg1 = point2[R_ARG1]["arg_text"]
+    contextual_arg2 = point2[R_ARG2]["arg_text"]
+    contextual_relation_type = point2["type"][4:-4]  # strip off the "___" before and after in e.g.,"____EntRel____"
+
+    FLAG_checkgood = True
+    if not sample_arg1 == contextual_arg1 or \
+            not sample_arg2 == contextual_arg2 or \
+            not sample_relation_type == contextual_relation_type:
+        FLAG_checkgood = False
+
+    if not FLAG_checkgood:
+        error_string = "Error with: "
+        if not sample_arg1 == contextual_arg1:
+            print(f"sample_arg1:\n --{sample_arg1}--")
+            print(f"contextual_arg1:\n --{contextual_arg1}--")
+            error_string += " ARG1"
+        if not sample_arg2 == contextual_arg2:
+            print(f"sample_arg2:\n --{sample_arg2}--")
+            print(f"contextual_arg2:\n --{contextual_arg2}--")
+            error_string += " ARG2"
+        if not sample_relation_type == contextual_relation_type:
+            print(f"sample_rel:\n --{sample_relation_type}--")
+            print(f"contextual_rel:\n --{contextual_relation_type}--")
+            error_string += " REL"
+
+    return FLAG_checkgood
+
 def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
     """
     This method intercepts the "cur_samples" data structure and adds extra context information to the samples.
@@ -298,6 +331,19 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
 
     #STEP 1. Call alternative PDTB2 label file reader
     annotations = pdtb2_file_reader(input_filename)
+
+
+    #STEP 1a. Integrate results with the original dicts.
+    # pass information extracted from Wei Liu's data reader to this data reader (union, without clobbering)
+    result = []
+    for i,sample in enumerate(cur_samples):
+
+        if is_same_datapoint(sample, annotations[i]):
+            for key in sample.keys():
+                if not key in annotations[i].keys():
+                    annotations[i][key] = sample[key]
+
+
 
     #STEP 2. Analyse the filename to extract the (i) section and (2) filestub
     filename = os.path.basename(input_filename)
