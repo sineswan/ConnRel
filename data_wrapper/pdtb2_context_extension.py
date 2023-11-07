@@ -405,6 +405,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
             #Apply truncation regardless of context mode type
             new_string = sample["context"] + " " + sample["arg1"]
             sample['arg1'], sample['truncation_length'] = truncate(new_string)
+            sample["context_mode"]=mode
 
             #finalise result
             result.append(sample)

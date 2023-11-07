@@ -13,6 +13,15 @@ Then you need to download roberta-base from [here](https://huggingface.co/robert
 1. copy the raw corpus (folder with .pdtb files) under the folder "data/dataset/pdtb2/raw", 
 2. do preprocessing via `python3 preprocessing`. (you may need to active some codes in main function of preprocesing.py). The raw corpus looks like: 00, 01, 02, ..., 24.
 
+```python
+#Either default:
+python3 preprocessing
+
+#or with context: mode 0 (prior text, maximum), mode 1 (gold labelled linked prior text)
+python preprocessing.py --pdtb2_raw_text_dir ../../../data/pdtb_v2_LDC2008T05/pdtb_v2/data/raw/wsj --context_mode 1
+
+```
+
 **For PDTB 3.0**
 1. copy the raw corpus under the folder "data/dataset/pdtb3/raw/gold" and "data/dataset/pdtb3/raw/data", where the former is label files and the latter is text files. 
 2. do preprocessing via `python3 preprocessing`. (you may need to active some codes in main function of preprocesing.py). The corpus in both raw/gold and raw/data looks like: 00, 01, 02, ..., 24.
