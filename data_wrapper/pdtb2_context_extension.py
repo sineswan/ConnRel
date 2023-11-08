@@ -18,6 +18,8 @@ annot_relation_strings = [R_EXPLICIT, R_IMPLICIT]
 annot_other_strings = [R_ENTREL, R_ALTLEX, R_NOREL]
 annot_arg_strings = [R_ARG1, R_ARG2]
 annot_has_selection_string = [R_EXPLICIT, R_ALTLEX]  #others have "inferenceSite
+annot_has_relationship = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX]  #has a relationship but ALTLEX has no connective
+annot_exists = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX, R_ENTREL]  #anything but NOREL
 
 #header_row_mapping always assumes 1st element (idx=0) is the subsection type: rel_type, arg1, arg2
 #these are array indices, for an array of strings
@@ -174,11 +176,13 @@ def read_raw(filename):
         text = file.read()
     return text
 
-def add_context(annotations, raw_text):
+def add_context(annotations, raw_text, consider_all=False):
 
     #assuming annotations are in order
     arg1s = {}
     arg2s = {}
+
+    dependencies = {}
 
     mode1_stats = {
         "found":0,
@@ -223,25 +227,50 @@ def add_context(annotations, raw_text):
             # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
             annotation["context"]["raw"] = context
 
-        #Mode 1
-        if True:
-            if arg1 in arg2s.keys():
-                print(f"FOUND prior dependency: ARG1: {arg1}, dependencies: {arg2s[arg1]}")
+        #Mode 1-99: use gold context
+        if True: #mode < 100:
+
+            found_match = None
+            for an_arg2 in arg2s.keys():
+                if arg1 in an_arg2 or an_arg2 in arg1:  #some nested substring exists:
+                    found_match = an_arg2
+
+            if found_match:
+                # print(f"FOUND prior dependency: ARG1: {arg1}, found_match: {found_match}, ARG2: {arg2} ")
                 mode1_stats["found"] += 1
 
+                #We loop over all data points with this prior arg2 which might break linear order of text but this is rare.
                 dep_context = []
-                for dep_id in arg2s[arg1]:
+                for dep_id in arg2s[found_match]:
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
                     prior_connective = annotations[dep_id]["conn"]
                     prior_discourse_type = annotations[dep_id]["type"]
 
                     mode1_stats[prior_discourse_type] += 1
 
-                    if prior_discourse_type in annot_relation_strings:
-                        print(f"prior connective: {prior_connective}")
-                        dep_context.append(prior_arg+" "+prior_connective)
+                    #find preceding (accumulated) dependencies
+                    if prior_arg in dependencies.keys():
+                        #need to iterate to *copy* content (i.e., duplicate) to new dep_context for THIS data point
+                        for deps in dependencies[prior_arg]:
+                            dep_context.append(deps)
+
+                    #Only use (explicit or implicitly marked) discourse relationships
+                    if consider_all:
+                        if prior_discourse_type in annot_exists:
+                            dep_context.append(prior_arg + " " + prior_connective)
+                    else:
+
+                        if prior_discourse_type in annot_has_relationship:
+                            # print(f"prior connective: {prior_connective}")
+                            dep_context.append(prior_arg+" "+prior_connective)
+
+                # print(f"len(chained_context): {len(dep_context)}: {dep_context}\n")
+
                 annotation["context"]["chained"] = dep_context
-                annotation["context"]["chained_source_ids"] = arg2s[arg1]
+                annotation["context"]["chained_source_ids"] = arg2s[found_match]
+
+                #accumulate dependencies for this matched arg1
+                dependencies[arg1] = dep_context
 
             else:
                 # print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
@@ -251,7 +280,7 @@ def add_context(annotations, raw_text):
 
 
 
-    print(f"mode1_stats: {mode1_stats}")
+    print(f"SUMMARY mode1_stats: {mode1_stats}")
     return annotations
 
 
@@ -287,7 +316,7 @@ def truncate(text, max_length=512):
 
     truncation_length = org_length - length
 
-    return truncated_text, truncation_length
+    return truncated_text, truncation_length, org_length
 
 def is_same_datapoint(point1, point2):
     # check args and type
@@ -328,7 +357,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
 
     Modes:
     0: use the raw context where offsets use to find all preceding text leading up to ARG1
-    1: use the *last* (most recent) immediate context, where a relationship was annotated.
+    1-99: use the *last* (most recent) n (n=mode#) immediate context, where a relationship was annotated.
     """
 
     # This method relies on the original data reading code of ConnRel (ACL 2023)
@@ -373,10 +402,12 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
     raw_contents = read_raw(raw_text_filepath)
 
     #STEP 4. Extract context
-    annotations = add_context(annotations, raw_contents)
+    FLAG_consider_all = False
+    annotations = add_context(annotations, raw_contents, consider_all=FLAG_consider_all)
 
     #STEP 5. integrate results with the original dicts.
     result = []
+    context_len_dist = {}
     for i,sample in enumerate(cur_samples):
 
         if is_same_datapoint(sample, annotations[i]):
@@ -392,23 +423,38 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
             if mode==0:
                 sample["context"] = annotations[i]["context"]["raw"]
 
-            #MODE 1: Context== most recent (single) relationship where this sent/arg was an ARG2
+            #MODE 1: Context== most recent n (n=mode#) relationship where this sent/arg was an ARG2
             else:
-                #mode==1:
-                some_context = ""
-                if len(annotations[i]["context"]["chained"]) > 0:
-                    some_context = annotations[i]["context"]["chained"][-1]
+                if mode < 100:
+                    #1 < mode < 99: means amount of gold relationships to use
+                    some_context = ""
+                    chained_context = annotations[i]["context"]["chained"]
+                    print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
+                    print(f"\n {chained_context}\n")
+                    if len(chained_context) > 0:
+                        offset = mode
+                        if offset> len(chained_context):
+                            offset = len(chained_context)
 
-                sample["context"] = some_context
-                sample["context_provenance"] = annotations[i]["context"]
+                        some_context = chained_context[-offset]  #mode is number of contect sentences to use
+
+                        #store offset dist
+                        if not offset in context_len_dist.keys():
+                            context_len_dist[offset] = 1
+                        else:
+                            context_len_dist[offset] += 1
+
+                    sample["context"] = some_context
+                    sample["context_provenance"] = annotations[i]["context"]
 
             #Apply truncation regardless of context mode type
             new_string = sample["context"] + " " + sample["arg1"]
-            sample['arg1'], sample['truncation_length'] = truncate(new_string)
+            sample['arg1'], sample['truncation_length'], sample['arg1_org_len'] = truncate(new_string)
             sample["context_mode"]=mode
 
             #finalise result
             result.append(sample)
 
+    print(f"SUMMARY: Context len dist: {context_len_dist}")  #print to stdout distribution of context offset lengths for this preprocessing job
     return result
 
