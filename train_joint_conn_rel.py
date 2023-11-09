@@ -72,6 +72,7 @@ def get_argparse():
 
     #SW: adding parameter to control truncation side.  Needed if padding with context.
     parser.add_argument("--truncation_side_right", default=1, type=int, help="1 if we truncate the end of string")
+    parser.add_argument("--write_file", default=0, type=int, help="1 if we write predictions to file")
 
     return parser
 
@@ -191,10 +192,10 @@ def train(model, args, train_dataset, dev_dataset, test_dataset, conn_list, labe
         #     model, args, train_dataset, conn_list, label_list, tokenizer, epoch, desc="train"
         # )
         dev_conn_acc, dev_acc, dev_f1 = evaluate(
-            model, args, dev_dataset, conn_list, label_list, tokenizer, epoch, desc="dev"
+            model, args, dev_dataset, conn_list, label_list, tokenizer, epoch, desc="dev", write_file=args.write_file==1
         )
         test_conn_acc, test_acc, test_f1 = evaluate(
-            model, args, test_dataset, conn_list, label_list, tokenizer, epoch, desc="test"
+            model, args, test_dataset, conn_list, label_list, tokenizer, epoch, desc="test", write_file=args.write_file==1
         )
         res_list.append((dev_acc, dev_f1, test_acc, test_f1))
         print(" Epoch=%d"%(epoch))
@@ -397,14 +398,14 @@ def main():
             dataset = JointRobertaBaseDataset(dev_data_file, params=dataset_params)
             conn_acc, acc, f1 = evaluate(
                 model, args, dataset, conn_list, label_list, tokenizer,
-                epoch, desc="dev", write_file=False
+                epoch, desc="dev", write_file=args.write_file
             )
             print(" Dev: conn_acc=%.4f, acc=%.4f, f1=%.4f\n" % (conn_acc, acc, f1))
         if args.do_test:
             dataset = JointRobertaBaseDataset(test_data_file, params=dataset_params)
             conn_acc, acc, f1 = evaluate(
                 model, args, dataset, conn_list, label_list, tokenizer,
-                epoch, desc="test", write_file=False
+                epoch, desc="test", write_file=args.write_file
             )
             print("Test: conn_acc=%.4f, acc=%.4f, f1=%.4f\n" % (conn_acc, acc, f1))
 
