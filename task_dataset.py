@@ -316,7 +316,10 @@ class JointRobertaBaseDataset(Dataset):
 
                     # print(f"Mask token: {tokens[mask_position_id]}, others: {tokens[mask_position_id -2: mask_position_id +2]}")
 
-                    assert mask_position_id < self.max_seq_length, (mask_position_id, self.max_seq_length)
+                    # assert mask_position_id < self.max_seq_length, (mask_position_id, self.max_seq_length)
+                    if mask_position_id >= self.max_seq_length:
+                        print("Exceed max sequence length....")
+                        continue
                     if connectives in self.connective_list:
                         conn_id = self.connective_list.index(connectives)
                     else:

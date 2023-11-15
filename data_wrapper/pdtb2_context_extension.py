@@ -436,7 +436,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                         if offset> len(chained_context):
                             offset = len(chained_context)
 
-                        some_context = chained_context[-offset]  #mode is number of contect sentences to use
+                        some_context = chained_context[-offset:]  #mode is number of contect sentences to use
 
                         #store offset dist
                         if not offset in context_len_dist.keys():
@@ -444,7 +444,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                         else:
                             context_len_dist[offset] += 1
 
-                    sample["context"] = some_context
+                    sample["context"] = " ".join(some_context)
                     sample["context_provenance"] = annotations[i]["context"]
 
             #Apply truncation regardless of context mode type
