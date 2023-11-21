@@ -243,6 +243,9 @@ def add_context(annotations, raw_text, consider_all=False):
                 for dep_id in arg2s[found_match]:
 
                     prior_dep = annotations[dep_id]
+
+                    print(f"prior_dep: \n {json.dumps(prior_dep, indent=3)}")
+
                     prior_arg = prior_dep[R_ARG1]["arg_text"]
                     prior_arg_start = prior_dep[R_ARG1][0][0]   #position tuple is in a list (usually singleton); take 1st
                     prior_arg_end = prior_dep[R_ARG1][0][1]     #position tuple is in a list (usually singleton); take 2nd
