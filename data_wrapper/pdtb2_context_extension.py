@@ -242,11 +242,32 @@ def add_context(annotations, raw_text, consider_all=False):
                 dep_context = []
                 for dep_id in arg2s[found_match]:
 
-                    print(f"Matched prior ARG2: \n {json.dumps(annotations[dep_id])}")
+                    prior_dep = annotations[dep_id]
+                    prior_arg = prior_dep[R_ARG1]["arg_text"]
+                    prior_arg_start = prior_dep[R_ARG1][0][0]   #position tuple is in a list (usually singleton); take 1st
+                    prior_arg_end = prior_dep[R_ARG1][0][1]     #position tuple is in a list (usually singleton); take 2nd
+                    prior_connective = prior_dep["conn"]
+                    prior_discourse_type = prior_dep["type"]
+                    prior_connective_positions = None
+                    if prior_discourse_type in annot_has_relationship:
+                        prior_connective_position_str = prior_dep["relation"]["main_span_list"]
+                        if ".." in prior_connective_position_str:
+                            #could be a range
+                            prior_connective_positions = [int(x) for x in prior_connective_position_str.split("..")]
+                        else:
+                            #or else it's a nominal char position where the connective would be inserted.
+                            prior_connective_positions = \
+                                [int(prior_connective_position_str), int(prior_connective_position_str)]
 
-                    prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
-                    prior_connective = annotations[dep_id]["conn"]
-                    prior_discourse_type = annotations[dep_id]["type"]
+                    candidate_prior_arg = raw_text[prior_arg_start:prior_arg_end]
+                    if prior_connective_positions:
+                        earliest_char_pos = (
+                            prior_arg_start) if \
+                            (prior_arg_start < prior_connective_positions[0]) else prior_connective_positions[0]
+                        latest_char_pos = (
+                            prior_arg_end) if \
+                            (prior_arg_end > prior_connective_positions[1]) else prior_connective_positions[1]
+                        candidate_prior_arg = raw_text[earliest_char_pos:latest_char_pos]
 
                     mode1_stats[prior_discourse_type] += 1
 
@@ -260,7 +281,7 @@ def add_context(annotations, raw_text, consider_all=False):
                     if (consider_all and prior_discourse_type in annot_exists) or \
                         (prior_discourse_type in annot_has_relationship):
                             # print(f"prior connective: {prior_connective}")
-                            dep_context.append(prior_arg+" "+prior_connective)
+                            dep_context.append(candidate_prior_arg)
 
 
                 # print(f"len(chained_context): {len(dep_context)}: {dep_context}\n")
@@ -443,13 +464,13 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                         else:
                             context_len_dist[offset] += 1
 
-                    sample["context"] = " ".join(some_context)
+                    sample["context"] = ". ".join(some_context)
                     sample["context_provenance"] = annotations[i]["context"]
 
             #Apply truncation regardless of context mode type
             new_string = sample["context"] + " " + sample["arg1"]
             sample['arg1'], sample['truncation_length'], sample['arg1_org_len'] = truncate(new_string)
-            sample["context_mode"]=mode
+            sample["context_mode"] = mode
 
             #finalise result
             result.append(sample)
