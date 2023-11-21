@@ -244,7 +244,7 @@ def add_context(annotations, raw_text, consider_all=False):
 
                     prior_dep = annotations[dep_id]
 
-                    print(f"prior_dep: \n {json.dumps(prior_dep, indent=3)}")
+                    # print(f"prior_dep: \n {json.dumps(prior_dep, indent=3)}")
 
                     prior_arg = prior_dep[R_ARG1]["arg_text"]
                     prior_connective = prior_dep["conn"]
@@ -487,6 +487,11 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
             new_string = sample["context"] + " " + sample["arg1"]
             sample['arg1'], sample['truncation_length'], sample['arg1_org_len'] = truncate(new_string)
             sample["context_mode"] = mode
+
+            #trace writes to debug
+            if mode > 0:
+                if len(annotations[i]["context"]["chained"]) > 0 and annotations[i]["relation_type"]==R_IMPLICIT:
+                    print(f"-----------\n {json.dumps(annotations[i], indent=3)} \n -----------------")
 
             #finalise result
             result.append(sample)
