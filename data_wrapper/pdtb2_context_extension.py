@@ -265,8 +265,8 @@ def add_context(annotations, raw_text, consider_all=False):
                             prior_connective_position_str = prior_dep["main_span_list"]
                             prior_connective_positions = [int(x) for x in prior_connective_position_str.split("..")]
 
-                        prior_arg_start = prior_dep[R_ARG1][0][0]   #position tuple is in a list (usually singleton); take 1st
-                        prior_arg_end = prior_dep[R_ARG1][0][1]     #position tuple is in a list (usually singleton); take 2nd
+                        prior_arg_start = prior_dep[R_ARG1]["arg_span_list"][0][0]   #position tuple is in a list (usually singleton); take 1st
+                        prior_arg_end = prior_dep[R_ARG1]["arg_span_list"][0][1]     #position tuple is in a list (usually singleton); take 2nd
 
                         #prior_connective_positions are now set
                         earliest_char_pos = (
