@@ -283,7 +283,8 @@ def add_context(annotations, raw_text, consider_all=False):
                             #always use prior_arg_end because if the connective comes after it is the start of a new sent
                             candidate_prior_arg = raw_text[earliest_char_pos:prior_arg_end]
                             # if prior_connective_position[1] > prior_arg_end:
-                            #     candidate_prior_arg += " # "+prior_connective+" @ "
+
+                            candidate_prior_arg += " #_ "+prior_connective+" _@ "
 
                     mode1_stats[prior_discourse_type] += 1
 
@@ -465,8 +466,8 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                     #1 < mode < 99: means amount of gold relationships to use
                     some_context = ""
                     chained_context = annotations[i]["context"]["chained"]
-                    print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
-                    print(f"\n {chained_context}\n")
+                    # print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
+                    print(f"\n {chained_context}  & {sample['arg1']} & {sample['conn']} & {sample['arg2']}\n")
                     if len(chained_context) > 0:
                         offset = mode
                         if offset> len(chained_context):
