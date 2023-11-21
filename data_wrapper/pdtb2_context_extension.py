@@ -263,7 +263,7 @@ def add_context(annotations, raw_text, consider_all=False):
                         if prior_discourse_type == R_IMPLICIT:
                             # it's a nominal char position where the connective would be inserted.
                             prior_connective_position = prior_dep["string_pos"]
-                            if prior_connective_position < prior_arg_start:
+                            if prior_connective_position < prior_arg_start :
                                 candidate_prior_arg = " # "+prior_connective+" @ "+candidate_prior_arg
                             else:
                                 candidate_prior_arg = candidate_prior_arg + " # " + prior_connective + " @ "
@@ -275,13 +275,15 @@ def add_context(annotations, raw_text, consider_all=False):
 
 
                             #prior_connective_positions are now set
-                            earliest_char_pos = (
-                                prior_arg_start) if \
+
+                            #Connective could come before arg1: e.g., Although ARG1 ... ARG2
+                            earliest_char_pos = (prior_arg_start) if \
                                 (prior_arg_start < prior_connective_positions[0]) else prior_connective_positions[0]
-                            latest_char_pos = (
-                                prior_arg_end) if \
-                                (prior_arg_end > prior_connective_positions[1]) else prior_connective_positions[1]
-                            candidate_prior_arg = raw_text[earliest_char_pos:latest_char_pos]
+
+                            #always use prior_arg_end because if the connective comes after it is the start of a new sent
+                            candidate_prior_arg = raw_text[earliest_char_pos:prior_arg_end]
+                            # if prior_connective_position[1] > prior_arg_end:
+                            #     candidate_prior_arg += " # "+prior_connective+" @ "
 
                     mode1_stats[prior_discourse_type] += 1
 
