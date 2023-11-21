@@ -200,6 +200,9 @@ def add_context(annotations, raw_text, consider_all=False):
         #save args to internal dicts
         arg1 = annotation[R_ARG1]["arg_text"]
         arg2 = annotation[R_ARG2]["arg_text"]
+        # Find the earliest point to trackback to find context
+        arg1_start = annotation[R_ARG1]["arg_span_list"][0][0] #1st element, 1st offset
+        arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
         if not arg1 in arg1s.keys():
             arg1s[arg1] = [i]
         else:
@@ -215,10 +218,6 @@ def add_context(annotations, raw_text, consider_all=False):
         if raw_text:   #so assuming there's original content to get context
 
             context = ""
-            # Find the earliest point to trackback to find context
-            arg1_start = annotation[R_ARG1]["arg_span_list"][0][0] #1st element, 1st offset
-            arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
-
             # print(f"Arg start chars: {arg1_start} {arg2_start}")
             arg_start_min = min(arg1_start, arg2_start)
             # print(f"min: {arg_start_min}")
@@ -255,12 +254,8 @@ def add_context(annotations, raw_text, consider_all=False):
                             dep_context.append(deps)
 
                     #Only use (explicit or implicitly marked) discourse relationships
-                    if consider_all:
-                        if prior_discourse_type in annot_exists:
-                            dep_context.append(prior_arg + " " + prior_connective)
-                    else:
-
-                        if prior_discourse_type in annot_has_relationship:
+                    if (consider_all and prior_discourse_type in annot_exists) or \
+                        (prior_discourse_type in annot_has_relationship):
                             # print(f"prior connective: {prior_connective}")
                             dep_context.append(prior_arg+" "+prior_connective)
 
@@ -444,7 +439,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                         else:
                             context_len_dist[offset] += 1
 
-                    sample["context"] = " ".join(some_context)
+                    sample["context"] = ". ".join(some_context)
                     sample["context_provenance"] = annotations[i]["context"]
 
             #Apply truncation regardless of context mode type
