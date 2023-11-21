@@ -249,19 +249,20 @@ def add_context(annotations, raw_text, consider_all=False):
                     prior_arg = prior_dep[R_ARG1]["arg_text"]
                     prior_connective = prior_dep["conn"]
                     prior_discourse_type = prior_dep["type"]
-                    prior_connective_positions = None
                     candidate_prior_arg = prior_arg
+
                     if prior_discourse_type in annot_has_relationship:
                         #find the prior_arg and conn offsets and find the outer set (maximal string)
 
-                        prior_connective_position_str = prior_dep["relation"]["main_span_list"]
-                        if ".." in prior_connective_position_str:
-                            #could be a range
-                            prior_connective_positions = [int(x) for x in prior_connective_position_str.split("..")]
-                        else:
-                            #or else it's a nominal char position where the connective would be inserted.
+                        prior_connective_positions = None
+                        if prior_discourse_type == R_IMPLICIT:
+                            # it's a nominal char position where the connective would be inserted.
+                            prior_connective_position_str = prior_dep["relation"]["string_pos"]
                             prior_connective_positions = \
                                 [int(prior_connective_position_str), int(prior_connective_position_str)]
+                        else:
+                            #could be a range
+                            prior_connective_positions = [int(x) for x in prior_connective_position_str.split("..")]
 
                         prior_arg_start = prior_dep[R_ARG1][0][0]   #position tuple is in a list (usually singleton); take 1st
                         prior_arg_end = prior_dep[R_ARG1][0][1]     #position tuple is in a list (usually singleton); take 2nd
