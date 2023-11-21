@@ -1,4 +1,4 @@
-import os
+import os, json
 
 #referencing the fileformat.pdf documentation for PDTB2 outlining BDF rules for the annotation
 R_ARG1 = "____Arg1____"
@@ -241,6 +241,9 @@ def add_context(annotations, raw_text, consider_all=False):
                 #We loop over all data points with this prior arg2 which might break linear order of text but this is rare.
                 dep_context = []
                 for dep_id in arg2s[found_match]:
+
+                    print(f"Matched prior ARG2: \n {json.dump(annotations[dep_id])}")
+
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
                     prior_connective = annotations[dep_id]["conn"]
                     prior_discourse_type = annotations[dep_id]["type"]
