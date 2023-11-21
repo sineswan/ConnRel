@@ -247,12 +247,13 @@ def add_context(annotations, raw_text, consider_all=False):
                     print(f"prior_dep: \n {json.dumps(prior_dep, indent=3)}")
 
                     prior_arg = prior_dep[R_ARG1]["arg_text"]
-                    prior_arg_start = prior_dep[R_ARG1][0][0]   #position tuple is in a list (usually singleton); take 1st
-                    prior_arg_end = prior_dep[R_ARG1][0][1]     #position tuple is in a list (usually singleton); take 2nd
                     prior_connective = prior_dep["conn"]
                     prior_discourse_type = prior_dep["type"]
                     prior_connective_positions = None
+                    candidate_prior_arg = prior_arg
                     if prior_discourse_type in annot_has_relationship:
+                        #find the prior_arg and conn offsets and find the outer set (maximal string)
+
                         prior_connective_position_str = prior_dep["relation"]["main_span_list"]
                         if ".." in prior_connective_position_str:
                             #could be a range
@@ -262,8 +263,10 @@ def add_context(annotations, raw_text, consider_all=False):
                             prior_connective_positions = \
                                 [int(prior_connective_position_str), int(prior_connective_position_str)]
 
-                    candidate_prior_arg = raw_text[prior_arg_start:prior_arg_end]
-                    if prior_connective_positions:
+                        prior_arg_start = prior_dep[R_ARG1][0][0]   #position tuple is in a list (usually singleton); take 1st
+                        prior_arg_end = prior_dep[R_ARG1][0][1]     #position tuple is in a list (usually singleton); take 2nd
+
+                        #prior_connective_positions are now set
                         earliest_char_pos = (
                             prior_arg_start) if \
                             (prior_arg_start < prior_connective_positions[0]) else prior_connective_positions[0]
