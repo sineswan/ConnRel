@@ -467,7 +467,8 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                     some_context = ""
                     chained_context = annotations[i]["context"]["chained"]
                     # print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
-                    print(f"\n {chained_context}  & {sample['arg1']} & {sample['conn']} & {sample['arg2']}\n")
+                    if len(chained_context) > 0:
+                        print(f"\n {chained_context}  & {sample['arg1']} & {sample['conn']} & {sample['arg2']}\n")
                     if len(chained_context) > 0:
                         offset = mode
                         if offset> len(chained_context):
