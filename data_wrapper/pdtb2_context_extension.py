@@ -242,7 +242,7 @@ def add_context(annotations, raw_text, consider_all=False):
                 dep_context = []
                 for dep_id in arg2s[found_match]:
 
-                    print(f"Matched prior ARG2: \n {json.dump(annotations[dep_id])}")
+                    print(f"Matched prior ARG2: \n {json.dumps(annotations[dep_id])}")
 
                     prior_arg = annotations[dep_id][R_ARG1]["arg_text"]
                     prior_connective = annotations[dep_id]["conn"]
