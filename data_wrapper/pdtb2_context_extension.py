@@ -183,6 +183,7 @@ def add_context(annotations, raw_text, consider_all=False):
     arg2s = {}
 
     dependencies = {}
+    dependency_offsets = {}
 
     mode1_stats = {
         "found":0,
@@ -240,6 +241,7 @@ def add_context(annotations, raw_text, consider_all=False):
 
                 #We loop over all data points with this prior arg2 which might break linear order of text but this is rare.
                 dep_context = []
+                dep_context_offsets = []
                 for dep_id in arg2s[found_match]:
 
                     prior_dep = annotations[dep_id]
@@ -251,13 +253,15 @@ def add_context(annotations, raw_text, consider_all=False):
                     prior_discourse_type = prior_dep["type"]
                     candidate_prior_arg = prior_arg
 
+                    # position tuple is in a list (usually singleton); take 1st
+                    prior_arg_start = prior_dep[R_ARG1]["arg_span_list"][0][0]
+                    # position tuple is in a list (usually singleton); take 2nd
+                    prior_arg_end = prior_dep[R_ARG1]["arg_span_list"][0][1]
+                    earliest_char_pos = prior_arg_start
+                    latest_char_pos = prior_arg_end
+
                     if prior_discourse_type in annot_has_relationship:
                         #find the prior_arg and conn offsets and find the outer set (maximal string)
-
-                        # position tuple is in a list (usually singleton); take 1st
-                        prior_arg_start = prior_dep[R_ARG1]["arg_span_list"][0][0]
-                        # position tuple is in a list (usually singleton); take 2nd
-                        prior_arg_end = prior_dep[R_ARG1]["arg_span_list"][0][1]
 
                         prior_connective_positions = None
                         if prior_discourse_type == R_IMPLICIT:
@@ -267,12 +271,10 @@ def add_context(annotations, raw_text, consider_all=False):
                                 candidate_prior_arg = " # "+prior_connective+" @ "+candidate_prior_arg
                             else:
                                 candidate_prior_arg = candidate_prior_arg + " # " + prior_connective + " @ "
-
                         else:
                             #could be a range
                             prior_connective_position = prior_dep["main_span_list"]
                             prior_connective_positions = prior_connective_position[0]
-
 
                             #prior_connective_positions are now set
 
@@ -291,23 +293,25 @@ def add_context(annotations, raw_text, consider_all=False):
                     #find preceding (accumulated) dependencies
                     if prior_arg in dependencies.keys():
                         #need to iterate to *copy* content (i.e., duplicate) to new dep_context for THIS data point
-                        for deps in dependencies[prior_arg]:
+                        for d,deps in enumerate(dependencies[prior_arg]):
                             dep_context.append(deps)
+                            dep_context_offsets.append(dependency_offsets[d])
 
                     #Only use (explicit or implicitly marked) discourse relationships
                     if (consider_all and prior_discourse_type in annot_exists) or \
                         (prior_discourse_type in annot_has_relationship):
                             # print(f"prior connective: {prior_connective}")
                             dep_context.append(candidate_prior_arg)
-
+                            dep_context_offsets.append((earliest_char_pos, latest_char_pos))
 
                 # print(f"len(chained_context): {len(dep_context)}: {dep_context}\n")
-
                 annotation["context"]["chained"] = dep_context
+                annotation["context"]["chained_offsets"] = dep_context_offsets
                 annotation["context"]["chained_source_ids"] = arg2s[found_match]
 
                 #accumulate dependencies for this matched arg1
                 dependencies[arg1] = dep_context
+                dependency_offsets[arg1] = dep_context_offsets
 
             else:
                 # print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
@@ -315,11 +319,8 @@ def add_context(annotations, raw_text, consider_all=False):
                 annotation["context"]["chained_source_ids"] = []
                 mode1_stats["not_found"] += 1
 
-
-
     print(f"SUMMARY mode1_stats: {mode1_stats}")
     return annotations
-
 
 from transformers import AutoTokenizer
 
@@ -466,10 +467,18 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                     #1 < mode < 99: means amount of gold relationships to use
                     some_context = ""
                     chained_context = annotations[i]["context"]["chained"]
+                    chained_context_offsets = annotations[i]["context"]["chained_offsets"]
                     # print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
                     if len(chained_context) > 0:
-                        print(f"\n {chained_context}  & {sample['arg1']} & {sample['conn']} & {sample['arg2']}\n")
-                    if len(chained_context) > 0:
+                        print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
+
+                        #work out non-overlapping chained context
+                        nonoverlapping_context_chain = []
+                        for offsets_pair in chained_context_offsets:
+                            #FIXME
+                            pass
+
+
                         offset = mode
                         if offset> len(chained_context):
                             offset = len(chained_context)
