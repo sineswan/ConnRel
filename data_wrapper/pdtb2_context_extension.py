@@ -293,9 +293,10 @@ def add_context(annotations, raw_text, consider_all=False):
                     #find preceding (accumulated) dependencies
                     if prior_arg in dependencies.keys():
                         #need to iterate to *copy* content (i.e., duplicate) to new dep_context for THIS data point
-                        for d,deps in enumerate(dependencies[prior_arg]):
+                        for deps in dependencies[prior_arg]:
                             dep_context.append(deps)
-                            dep_context_offsets.append(dependency_offsets[d])
+                        for deps_start, deps_end in dependency_offsets[prior_arg]:
+                            dep_context_offsets.append((deps_start, deps_end))  #duplicate tuple
 
                     #Only use (explicit or implicitly marked) discourse relationships
                     if (consider_all and prior_discourse_type in annot_exists) or \
@@ -316,6 +317,7 @@ def add_context(annotations, raw_text, consider_all=False):
             else:
                 # print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
                 annotation["context"]["chained"] = []
+                annotation["context"]["chained_offsets"] = []
                 annotation["context"]["chained_source_ids"] = []
                 mode1_stats["not_found"] += 1
 
@@ -471,16 +473,12 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                     # print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
                     if len(chained_context) > 0:
                         print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
+                        print(f"\n {chained_context_offsets}")
 
-                        #work out non-overlapping chained context
-                        nonoverlapping_context_chain = []
-                        for offsets_pair in chained_context_offsets:
-                            #FIXME
-                            pass
-
+                        # _ = make_non_overlapping_context_chain(chained_context, chained_context_offsets)
 
                         offset = mode
-                        if offset> len(chained_context):
+                        if offset > len(chained_context):
                             offset = len(chained_context)
 
                         some_context = chained_context[-offset:]  #mode is number of contect sentences to use
