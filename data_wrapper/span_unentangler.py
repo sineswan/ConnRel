@@ -1,3 +1,6 @@
+import json
+
+
 class SpanUnentangler:
 
     def make_non_overlapping_context_chain(self, chain, chain_offsets):
@@ -21,6 +24,8 @@ class SpanUnentangler:
             Case 3 [island].  Add current span to kept_spans
 
         '''
+
+        # print(f"INPUTS: \n {json.dumps(chain, indent=3)} \n {chain_offsets}")
 
         # 1. Prepare sorted views of data: Sort spans by size and keep a sorted order of span_starts
 
@@ -49,38 +54,38 @@ class SpanUnentangler:
         a_big_span_id = span_sizes[max_span_length][0]  # could be multiple, must be at least one, just take first.
         boundary = chain_offsets[a_big_span_id]
 
-        print(f"max_span_length: {max_span_length}, boundary: {boundary}")
+        # print(f"max_span_length: {max_span_length}, boundary: {boundary}")
 
         kept_spans[boundary[0]] = {"start": boundary[0], "end": boundary[1], "text":chain[a_big_span_id]}
 
         for a_span_size in sorted(span_sizes.keys(), reverse=True):  #must iterate outer loop by span size to limit mergers later
 
-            print(f"\na_span_size: {a_span_size}")
+            # print(f"\na_span_size: {a_span_size}")
 
             for span_id in span_sizes[a_span_size]:
                 span_offset = chain_offsets[span_id]
 
-                print(f"span_id: {span_id}")
+                # print(f"span_id: {span_id}")
 
                 # CASE 0. [External]  Non-overlapping
                 initial_overlap = self.has_some_overlap_spans(boundary, span_offset)
-                print(f"initial_overlap: {initial_overlap}")
+                # print(f"initial_overlap: {initial_overlap}")
 
                 if not initial_overlap:  #not overlapping
 
-                    print(f"OUTCOME: simple insertion outside boundary")
+                    # print(f"OUTCOME: simple insertion outside boundary")
 
                     kept_spans[span_offset[0]] = {"start":span_offset[0], "end":span_offset[1], "text":chain[span_id]}
                 else:
 
-                    print(f"Entering 2nd branch")
+                    # print(f"Entering 2nd branch")
 
                     #CASE 1-3:  Compare to all already added spans
                     sorted_span_start_keys = sorted(kept_spans.keys())
                     sorted_span_start_keys_ptr = 0
                     added_span_start = sorted_span_start_keys[sorted_span_start_keys_ptr]
 
-                    print(f"sorted_span_start_keys: {sorted_span_start_keys}")
+                    # print(f"sorted_span_start_keys: {sorted_span_start_keys}")
 
                     # CASE 1. [partial overlap, start maybe covered by existing span.  Covers complete covering too (skipped)
                     #Inner loop must be ordered by start_offset
@@ -90,7 +95,7 @@ class SpanUnentangler:
                             and added_span_start <= span_offset[0] \
                             :
 
-                        print(f"entering while loop: {sorted_span_start_keys_ptr}")
+                        # print(f"entering while loop: {sorted_span_start_keys_ptr}")
 
                         if added_span_start == -1:
                             #skip this.  This span was merged into an earlier block. Technically, shouldn't be required
@@ -99,7 +104,7 @@ class SpanUnentangler:
                             added_span_start = sorted_span_start_keys[sorted_span_start_keys_ptr]
                             continue
 
-                        print(f"sorted_span_start_keys_ptr: {sorted_span_start_keys_ptr}")
+                        # print(f"sorted_span_start_keys_ptr: {sorted_span_start_keys_ptr}")
 
                         #otherwise, consider this added_span for overlaps.
                         added_span_end = kept_spans[added_span_start]["end"]
@@ -109,7 +114,7 @@ class SpanUnentangler:
 
                         #maybe identical span or subsumed completely, or partial (positive case) so set flag to TRUE
                         # if overlap == 2 nothing happens, existing added span is fine.
-                        if overlap > 1:
+                        if overlap >= 1:
                             #overlap found for this case
                             FLAG_case_closed = True
 
@@ -118,7 +123,7 @@ class SpanUnentangler:
                             # the next added_span, in which case they need to be merged.
                             if overlap == 1: #so some extension needed (and span2 comes AFTER span1; Different from -1 case!!)
 
-                                print(f"OUTCOME: merging overlap 1")
+                                # print(f"OUTCOME: merging overlap 1")
 
                                 kept_spans[added_span_start]["end"] = span_offset[1]  #the extension because overlap==1
 
@@ -126,22 +131,23 @@ class SpanUnentangler:
                                 kept_spans[added_span_start]["text"] = "FIXME" #FIXME
 
                                 #check that next added_span is still fine
-                                next_added_span_start = sorted_span_start_keys[sorted_span_start_keys_ptr + 1]
-                                if span_offset[1] > next_added_span_start:
+                                if len(sorted_span_start_keys) > sorted_span_start_keys_ptr + 1:  #check there is a next
+                                    next_added_span_start = sorted_span_start_keys[sorted_span_start_keys_ptr + 1]
+                                    if span_offset[1] > next_added_span_start:
 
-                                    #next span needs to be merged into this one.
-                                    next_added_span = kept_spans[next_added_span_start]
-                                    kept_spans[added_span_start]["end"] = next_added_span["end"]  # the extension because overlap==1
+                                        #next span needs to be merged into this one.
+                                        next_added_span = kept_spans[next_added_span_start]
+                                        kept_spans[added_span_start]["end"] = next_added_span["end"]  # the extension because overlap==1
 
-                                    # update text
-                                    kept_spans[added_span_start]["text"] = "FIXME"  # FIXME
+                                        # update text
+                                        kept_spans[added_span_start]["text"] = "FIXME"  # FIXME
 
-                                    #now clear the next added_span
-                                    sorted_span_start_keys[sorted_span_start_keys_ptr + 1] = -1  #-1 means skip this
+                                        #now clear the next added_span
+                                        sorted_span_start_keys[sorted_span_start_keys_ptr + 1] = -1  #-1 means skip this
                             else:
-                                print(f"OUTCOME: skipping overlap 2")
+                                # print(f"OUTCOME: skipping overlap 2")
                                 #Note that because we start with the largest span, we can't get overlap = -2
-
+                                pass
 
                         else:
                             #maintain loop variables
@@ -166,7 +172,7 @@ class SpanUnentangler:
                         #CASE 2: some overlap
                         if overlap == -1:
 
-                            print(f"OUTCOME: merging overlap -1")
+                            # print(f"OUTCOME: merging overlap -1")
 
                             # start_offset by def is outside added_span but end is inside. (so Span2 comes BEFORE Span1)
                             FLAG_case_closed = True #set to TRUE, although we don't need it anymore.  Just for consistency
@@ -184,7 +190,7 @@ class SpanUnentangler:
                         #CASE 3: no overlap, this is a simple insertion (without changing the boundaries)
                         elif overlap == 0:
 
-                            print(f"OUTCOME: simple insertion within boundary")
+                            # print(f"OUTCOME: simple insertion within boundary")
 
                             FLAG_case_closed = True #set to TRUE, although we don't need it anymore.  Just for consistency
 
@@ -197,7 +203,7 @@ class SpanUnentangler:
 
     def maintain_boundary(self, boundary, span_offset):
 
-        print(f"boundary: {boundary}, span_offset: {span_offset}")
+        # print(f"boundary: {boundary}, span_offset: {span_offset}")
 
         # maintain boundary
         new_start = boundary[0]
@@ -219,7 +225,7 @@ class SpanUnentangler:
             - if POSITIVE, then span1 < span2 (when overlapping)
         '''
 
-        print(f"span1: {span1}, span2: {span2}")
+        # print(f"span1: {span1}, span2: {span2}")
 
         if span2[1] <= span1[0] or span2[0] >= span1[1]:
             return 0
@@ -234,6 +240,9 @@ class SpanUnentangler:
 
 
 if __name__ == "__main__":
+    '''
+    This is testing code for this class based on examples from PDTB2 and my modification of Wei Liu's 2023 code
+    '''
     chains1 =  ['that his new album, "Inner Voices," had just been released, that his family was in the front row #_ and _@ ',
                "and that it was his mother's birthday #_ so _@ ",
                'Clad in his trademark black velvet suit, the soft-spoken clarinetist announced that his new album, "Inner Voices," had just been released, that his family was in the front row, and that it was his mother\'s birthday, so he was going to play her favorite tune from the record # then @ ']
@@ -277,9 +286,6 @@ if __name__ == "__main__":
      'You can go only up or down #_  _@ ', 'Most balloonists seldom go higher than 2,000 feet #_ and _@ ']
 
     chain_offsets6 = [(3894, 3903), (3905, 3950), (4001, 4021), (4001, 4049), (4051, 4077), (4242, 4291)]
-
-
-
 
     chains = chains6
     chain_offsets = chain_offsets6

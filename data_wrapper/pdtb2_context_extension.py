@@ -1,5 +1,7 @@
 import os, json
 
+from data_wrapper.span_unentangler import SpanUnentangler
+
 #referencing the fileformat.pdf documentation for PDTB2 outlining BDF rules for the annotation
 R_ARG1 = "____Arg1____"
 R_ARG2 = "____Arg2____"
@@ -459,9 +461,11 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
             sample['arg1_org'] = sample['arg1']
             #Add context
 
+            some_context = ""
+            processed_chained_context = []
             #Mode 0: Context== all preceding leading up to ARG1
             if mode==0:
-                sample["context"] = annotations[i]["context"]["raw"]
+                some_context = annotations[i]["context"]["raw"]
 
             #MODE 1: Context== most recent n (n=mode#) relationship where this sent/arg was an ARG2
             else:
@@ -472,10 +476,18 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                     chained_context_offsets = annotations[i]["context"]["chained_offsets"]
                     # print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
                     if len(chained_context) > 0:
-                        print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
-                        print(f"\n {chained_context_offsets}")
+                        # print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
+                        # print(f"\n {chained_context_offsets}")
 
-                        # _ = make_non_overlapping_context_chain(chained_context, chained_context_offsets)
+                        unentangler = SpanUnentangler()
+                        kept_spans = unentangler.make_non_overlapping_context_chain(chained_context, chained_context_offsets)
+
+                        processed_chained_context = []
+                        for key in sorted(kept_spans.keys()):
+                            processed_chained_context.append(kept_spans[key]["text"])
+
+                        #clobber original chained_context
+                        chained_context = processed_chained_context
 
                         offset = mode
                         if offset > len(chained_context):
@@ -489,8 +501,10 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                         else:
                             context_len_dist[offset] += 1
 
-                    sample["context"] = ". ".join(some_context)
-                    sample["context_provenance"] = annotations[i]["context"]
+            #add context info to sample (no matter which mode)
+            sample["context"] = ". ".join(some_context)
+            sample["context_provenance"] = annotations[i]["context"]
+            sample["context_full_procecssed_chain"] = processed_chained_context  # store it for later
 
             #Apply truncation regardless of context mode type
             new_string = sample["context"] + " " + sample["arg1"]
@@ -499,8 +513,9 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
 
             #trace writes to debug
             if mode > 0:
-                if len(annotations[i]["context"]["chained"]) > 0 and annotations[i]["relation_type"]==R_IMPLICIT:
-                    print(f"-----------\n {json.dumps(annotations[i], indent=3)} \n -----------------")
+                #have to use Wei Liu's relation strings (so no ___ before and after the type label
+                if len(sample["context_full_procecssed_chain"]) > 0  and sample["relation_type"]=="Implicit":
+                    print(f"-----------\n {json.dumps(sample, indent=3)} \n -----------------")
 
             #finalise result
             result.append(sample)
