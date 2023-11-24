@@ -178,7 +178,7 @@ def read_raw(filename):
         text = file.read()
     return text
 
-def add_context(annotations, raw_text, consider_all=False):
+def add_context(annotations, raw_text, consider_all=False, emphasise_connectives=False):
 
     #assuming annotations are in order
     arg1s = {}
@@ -269,10 +269,11 @@ def add_context(annotations, raw_text, consider_all=False):
                         if prior_discourse_type == R_IMPLICIT:
                             # it's a nominal char position where the connective would be inserted.
                             prior_connective_position = prior_dep["string_pos"]
-                            if prior_connective_position < prior_arg_start :
-                                candidate_prior_arg = " # "+prior_connective+" @ "+candidate_prior_arg
-                            else:
-                                candidate_prior_arg = candidate_prior_arg + " # " + prior_connective + " @ "
+                            if emphasise_connectives:
+                                if prior_connective_position < prior_arg_start :
+                                    candidate_prior_arg = " # "+prior_connective+" @ "+candidate_prior_arg
+                                else:
+                                    candidate_prior_arg = candidate_prior_arg + " # " + prior_connective + " @ "
                         else:
                             #could be a range
                             prior_connective_position = prior_dep["main_span_list"]
@@ -288,7 +289,11 @@ def add_context(annotations, raw_text, consider_all=False):
                             candidate_prior_arg = raw_text[earliest_char_pos:prior_arg_end]
                             # if prior_connective_position[1] > prior_arg_end:
 
-                            candidate_prior_arg += " #_ "+prior_connective+" _@ "
+                            if emphasise_connectives:
+                                if prior_connective_position < prior_arg_start:
+                                    candidate_prior_arg = " #_ " + prior_connective + " _@ " + candidate_prior_arg
+                                else:
+                                    candidate_prior_arg = candidate_prior_arg + " #_ " + prior_connective + " _@ "
 
                     mode1_stats[prior_discourse_type] += 1
 

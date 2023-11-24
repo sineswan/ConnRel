@@ -127,8 +127,8 @@ class SpanUnentangler:
 
                                 kept_spans[added_span_start]["end"] = span_offset[1]  #the extension because overlap==1
 
-                                #update text
-                                kept_spans[added_span_start]["text"] = "FIXME" #FIXME
+                                #update text: don't seem to run into this for PDTB2
+                                kept_spans[added_span_start]["text"] = "FIXME1"
 
                                 #check that next added_span is still fine
                                 if len(sorted_span_start_keys) > sorted_span_start_keys_ptr + 1:  #check there is a next
@@ -139,8 +139,8 @@ class SpanUnentangler:
                                         next_added_span = kept_spans[next_added_span_start]
                                         kept_spans[added_span_start]["end"] = next_added_span["end"]  # the extension because overlap==1
 
-                                        # update text
-                                        kept_spans[added_span_start]["text"] = "FIXME"  # FIXME
+                                        # update text: don't seem to run into this PDTB2
+                                        kept_spans[added_span_start]["text"] = "FIXME2"
 
                                         #now clear the next added_span
                                         sorted_span_start_keys[sorted_span_start_keys_ptr + 1] = -1  #-1 means skip this
@@ -180,10 +180,14 @@ class SpanUnentangler:
                             #update the added_span start
                             sorted_span_start_keys[sorted_span_start_keys_ptr] = span_offset[0]  #adjust value
                             #create new span entry (requires new start offset key)
+                            merged_text = kept_spans[added_span_start]["text"]
+                            diff_start = added_span_start - span_offset[0]
+                            additional_text = chain[span_id][:diff_start]
+                            merged_text += additional_text
                             kept_spans[span_offset[0]] = {
                                 "start": span_offset[0],
                                 "end": kept_spans[added_span_start]["end"],
-                                "text": "FIXME"
+                                "text": merged_text
                             }
                             kept_spans.pop(added_span_start)  #old span must be deleted
 
