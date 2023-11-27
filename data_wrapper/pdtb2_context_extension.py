@@ -262,7 +262,7 @@ def add_context(annotations, raw_text, consider_all=False, emphasise_connectives
                     earliest_char_pos = prior_arg_start
                     latest_char_pos = prior_arg_end
 
-                    if prior_discourse_type in annot_has_relationship:
+                    if prior_discourse_type in annot_relation_strings: #annot_has_relationship:
                         #find the prior_arg and conn offsets and find the outer set (maximal string)
 
                         prior_connective_positions = None
@@ -271,29 +271,41 @@ def add_context(annotations, raw_text, consider_all=False, emphasise_connectives
                             prior_connective_position = prior_dep["string_pos"]
                             if emphasise_connectives:
                                 if prior_connective_position < prior_arg_start :
-                                    candidate_prior_arg = " # "+prior_connective+" @ "+candidate_prior_arg
+                                    candidate_prior_arg = " "+prior_connective+" "+candidate_prior_arg
                                 else:
-                                    candidate_prior_arg = candidate_prior_arg + " # " + prior_connective + " @ "
+                                    candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
+
+                                # if prior_connective_position < prior_arg_start:
+                                #     candidate_prior_arg = " # " + prior_connective + " @ " + candidate_prior_arg
+                                # else:
+                                #     candidate_prior_arg = candidate_prior_arg + " # " + prior_connective + " @ "
+
                         else:
                             #could be a range
-                            prior_connective_position = prior_dep["main_span_list"]
-                            prior_connective_positions = prior_connective_position[0]
+                            prior_connective_position_tuple = prior_dep["main_span_list"]
+                            prior_connective_positions = prior_connective_position_tuple[0]
+                            prior_connective_start = prior_connective_positions[0]
 
                             #prior_connective_positions are now set
 
                             #Connective could come before arg1: e.g., Although ARG1 ... ARG2
                             earliest_char_pos = (prior_arg_start) if \
-                                (prior_arg_start < prior_connective_positions[0]) else prior_connective_positions[0]
+                                (prior_arg_start < prior_connective_start) else prior_connective_start
 
                             #always use prior_arg_end because if the connective comes after it is the start of a new sent
                             candidate_prior_arg = raw_text[earliest_char_pos:prior_arg_end]
                             # if prior_connective_position[1] > prior_arg_end:
 
                             if emphasise_connectives:
-                                if prior_connective_position < prior_arg_start:
-                                    candidate_prior_arg = " #_ " + prior_connective + " _@ " + candidate_prior_arg
+                                if prior_connective_start < prior_arg_start:
+                                    candidate_prior_arg = " " + prior_connective + " " + candidate_prior_arg
                                 else:
-                                    candidate_prior_arg = candidate_prior_arg + " #_ " + prior_connective + " _@ "
+                                    candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
+
+                                # if prior_connective_position < prior_arg_start:
+                                #     candidate_prior_arg = " #_ " + prior_connective + " _@ " + candidate_prior_arg
+                                # else:
+                                #     candidate_prior_arg = candidate_prior_arg + " #_ " + prior_connective + " _@ "
 
                     mode1_stats[prior_discourse_type] += 1
 
@@ -450,7 +462,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
 
     #STEP 4. Extract context
     FLAG_consider_all = False
-    annotations = add_context(annotations, raw_contents, consider_all=FLAG_consider_all)
+    annotations = add_context(annotations, raw_contents, consider_all=FLAG_consider_all, emphasise_connectives=True)
 
     #STEP 5. integrate results with the original dicts.
     result = []
