@@ -262,7 +262,7 @@ def add_context(annotations, raw_text, consider_all=False, emphasise_connectives
                     earliest_char_pos = prior_arg_start
                     latest_char_pos = prior_arg_end
 
-                    if prior_discourse_type in annot_relation_strings: #annot_has_relationship:
+                    if prior_discourse_type in annot_has_relationship:
                         #find the prior_arg and conn offsets and find the outer set (maximal string)
 
                         prior_connective_positions = None
