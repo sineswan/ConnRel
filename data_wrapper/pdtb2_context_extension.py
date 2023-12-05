@@ -3,7 +3,7 @@ import os, json
 from data_wrapper.context_manager_pdtb2_default import ContextManagerPDTB2
 from data_wrapper.span_unentangler import SpanUnentangler
 from data_wrapper.pdtb2_data_wrapper import *
-
+from data_wrapper.context_manager_joen import ContextManagerJoen
 
 from transformers import AutoTokenizer
 
@@ -75,7 +75,10 @@ def is_same_datapoint(point1, point2):
 mode_use_offsets = 0
 mode_use_annotations = 1
 mode_use_joen = 2
-def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context_size=0):
+mode_use_joen_1baseline = 3
+
+def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context_size=0,
+                      jeon_segment_reader=None):
     """
     This method intercepts the "cur_samples" data structure and adds extra context information to the samples.
 
@@ -120,6 +123,12 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context
     section_string = os.path.basename(section_dir)
     file_stub = filename[:-len(".pdtb")]  #strip off the ".pdtb" extension
 
+    # e.g.,  "id": "00.wsj_0001.000"
+
+    # e.g.,  "id": "00.wsj_0001.000"
+    filenum = file_stub.split("_")[1]  # e.g., 0001
+    doc_id = filenum
+
     print(f"filename: {filename}, section_str: {section_string}, file_stub:{file_stub}")
 
     raw_text_section_dir = os.path.join(raw_text_dir, section_string)
@@ -132,17 +141,16 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context
     FLAG_consider_all = False
     if mode in [mode_use_offsets, mode_use_annotations]:
         context_manager = ContextManagerPDTB2()
-        annotations = context_manager.add_context(annotations, raw_contents,
+        annotations = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
                                                   consider_all=FLAG_consider_all,
                                                   emphasise_connectives=True,
                                                   context_mode=mode)
-    # elif mode == mode_use_joen:
-    #     context_manager = ContextManagerPDTB2()
-    #     annotations = context_manager.add_context(annotations, raw_contents,
-    #                                               consider_all=FLAG_consider_all,
-    #                                               emphasise_connectives=True,
-    #                                               context_mode=mode,
-    #                                               context_size=context_size)
+    elif mode == mode_use_joen or mode == mode_use_joen_1baseline:
+        context_manager = ContextManagerJoen(jeon_segment_reader)
+        annotations = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
+                                                  consider_all=FLAG_consider_all,
+                                                  emphasise_connectives=True,
+                                                  context_mode=mode)
 
     #STEP 5. integrate results with the original dicts.
     result = []
@@ -198,21 +206,32 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context
                         else:
                             context_len_dist[offset] += 1
 
+                        annotations["context"]["context_full_procecssed_chain"] = processed_chained_context  # store it for later
+
+            elif mode==2 or mode==3:
+                #use Jeon segmentations
+                offset = context_size
+                chained_context = annotations[i]["context"]["chained"]
+                if offset > len(chained_context):
+                    offset = len(chained_context)
+
+                some_context = chained_context[-offset:]  # context_size is number of context sentences to use
+
             #add context info to sample (no matter which mode)
             sample["context"] = ". ".join(some_context)
             sample["context_provenance"] = annotations[i]["context"]
-            sample["context_full_procecssed_chain"] = processed_chained_context  # store it for later
 
             #Apply truncation regardless of context mode type
             new_string = sample["context"] + " " + sample["arg1"]
             sample['arg1'], sample['truncation_length'], sample['arg1_org_len'] = truncate(new_string)
             sample["context_mode"] = mode
+            sample["context_size"] = context_size
 
-            #trace writes to debug
-            if context_size > 0:
-                #have to use Wei Liu's relation strings (so no ___ before and after the type label
-                if len(sample["context_full_procecssed_chain"]) > 0  and sample["relation_type"]=="Implicit":
-                    print(f"-----------\n {json.dumps(sample, indent=3)} \n -----------------")
+            # #trace writes to debug
+            # if context_size > 0:
+            #     #have to use Wei Liu's relation strings (so no ___ before and after the type label
+            #     if len(sample["context_full_procecssed_chain"]) > 0  and sample["relation_type"]=="Implicit":
+            #         print(f"-----------\n {json.dumps(sample, indent=3)} \n -----------------")
 
             #finalise result
             result.append(sample)

@@ -7,6 +7,7 @@ import re
 import csv
 
 from data_wrapper import pdtb2_context_extension
+from data_wrapper.jeon_discourse_segment_data_wrapper import JeonSegmentReader
 
 def getConnLabel(text_array, is_altlex=False):
     array_size = len(text_array)
@@ -123,7 +124,8 @@ def pdtb2_file_reader(input_file):
 
     return all_samples
 
-def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=None, context_mode=0, context_size=0):
+def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=None, context_mode=0, context_size=0,
+                          jeon_segment_reader=None):
     """
     Args:
         source_dir:
@@ -154,7 +156,8 @@ def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=
         #extract context only if the PDTB raw text directory is provided
         if raw_text_dir:
             cur_samples = pdtb2_context_extension.read_pdtb2_sample(cur_samples, file_name, raw_text_dir,
-                                                                    context_mode, context_size)
+                                                                    context_mode, context_size,
+                                                                    jeon_segment_reader)
         all_samples.extend(cur_samples)
 
     with open(out_file_name, "w", encoding="utf-8") as f:
@@ -379,11 +382,16 @@ if __name__ == "__main__":
     parser.add_argument("--pdtb2_raw_text_dir", default=None)
     parser.add_argument("--context_mode", type=int, default=0)
     parser.add_argument("--context_size", type=int, default=0)
+    parser.add_argument("--jeon_sentences_filename", type=str, default=None)
+    parser.add_argument("--jeon_segments_filename", type=str, default=None)
     args = parser.parse_args()
     pdtb2_raw_text_dir = args.pdtb2_raw_text_dir
     context_mode = args.context_mode
     context_size = args.context_size
 
+    jeon_segment_reader = None
+    if args.jeon_sentences_filename and args.jeon_segments_filename:
+        jeon_segment_reader = JeonSegmentReader(args.jeon_sentences_filename, args.jeon_segments_filename)
 
     source_dir = "data/dataset/pdtb2/raw"
     data_list = [
@@ -394,17 +402,20 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
     mode = "train"
     refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size)
+                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                          jeon_segment_reader=jeon_segment_reader)
 
     data_list = ["00", "01"]
     mode = "dev"
     refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size)
+                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                          jeon_segment_reader=jeon_segment_reader)
 
     data_list = ["21", "22"]
     mode = "test"
     refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size)
+                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                          jeon_segment_reader=jeon_segment_reader)
     generate_label_file(output_dir)
 
     ## 2. Xval

@@ -2,7 +2,11 @@ from data_wrapper.pdtb2_data_wrapper import *
 
 class ContextManagerPDTB2:
 
-    def add_context(self, annotations, raw_text, consider_all=False, emphasise_connectives=False, context_mode=0):
+    def add_context(self, doc_id, annotations, raw_text, consider_all=False, emphasise_connectives=False, context_mode=0):
+        """
+        This method loops through all the annotations and collects context, noting that context can be carried across
+        annotations.
+        """
 
         # assuming annotations are in order
         arg1s = {}
@@ -53,7 +57,7 @@ class ContextManagerPDTB2:
                 # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
                 annotation["context"]["raw"] = context
 
-            # Mode 1-99: use gold context
+            # Mode 1: use gold context
             if context_mode==1:
 
                 found_match = None
