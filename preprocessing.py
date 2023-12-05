@@ -123,7 +123,7 @@ def pdtb2_file_reader(input_file):
 
     return all_samples
 
-def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=None, context_mode=0):
+def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=None, context_mode=0, context_size=0):
     """
     Args:
         source_dir:
@@ -153,7 +153,8 @@ def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=
 
         #extract context only if the PDTB raw text directory is provided
         if raw_text_dir:
-            cur_samples = pdtb2_context_extension.read_pdtb2_sample(cur_samples, file_name, raw_text_dir, context_mode)
+            cur_samples = pdtb2_context_extension.read_pdtb2_sample(cur_samples, file_name, raw_text_dir,
+                                                                    context_mode, context_size)
         all_samples.extend(cur_samples)
 
     with open(out_file_name, "w", encoding="utf-8") as f:
@@ -377,9 +378,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--pdtb2_raw_text_dir", default=None)
     parser.add_argument("--context_mode", type=int, default=0)
+    parser.add_argument("--context_size", type=int, default=0)
     args = parser.parse_args()
     pdtb2_raw_text_dir = args.pdtb2_raw_text_dir
     context_mode = args.context_mode
+    context_size = args.context_size
 
 
     source_dir = "data/dataset/pdtb2/raw"
@@ -391,17 +394,17 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
     mode = "train"
     refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode)
+                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size)
 
     data_list = ["00", "01"]
     mode = "dev"
     refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode)
+                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size)
 
     data_list = ["21", "22"]
     mode = "test"
     refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode)
+                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size)
     generate_label_file(output_dir)
 
     ## 2. Xval

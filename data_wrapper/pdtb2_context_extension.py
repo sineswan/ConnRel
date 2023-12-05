@@ -1,347 +1,9 @@
 import os, json
 
+from data_wrapper.context_manager_pdtb2_default import ContextManagerPDTB2
 from data_wrapper.span_unentangler import SpanUnentangler
+from data_wrapper.pdtb2_data_wrapper import *
 
-#referencing the fileformat.pdf documentation for PDTB2 outlining BDF rules for the annotation
-R_ARG1 = "____Arg1____"
-R_ARG2 = "____Arg2____"
-R_EXPLICIT = "____Explicit____"
-R_IMPLICIT = "____Implicit____"
-R_ENTREL = "____EntRel____"
-R_ALTLEX = "____AltLex____"
-R_NOREL =  "____NoRel____"
-
-data_splits = { #
-    "test":["21","22"],
-    "dev":["00", "01"]
-}
-
-annot_relation_strings = [R_EXPLICIT, R_IMPLICIT]
-annot_other_strings = [R_ENTREL, R_ALTLEX, R_NOREL]
-annot_arg_strings = [R_ARG1, R_ARG2]
-annot_has_selection_string = [R_EXPLICIT, R_ALTLEX]  #others have "inferenceSite
-annot_has_relationship = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX]  #has a relationship but ALTLEX has no connective
-annot_exists = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX, R_ENTREL]  #anything but NOREL
-
-#header_row_mapping always assumes 1st element (idx=0) is the subsection type: rel_type, arg1, arg2
-#these are array indices, for an array of strings
-selection_header_row_mapping = {
-    "span_list":1,
-    "gorn":2,
-    "text":4,
-    "features":7,
-    "rel_info":-1}
-inference_site_header_row_mapping = {
-    "string_pos":1,
-    "sent_num":2,
-    "features":4,
-    "rel_info":5}
-arg_header_row_mapping = {
-    "span_list":1,
-    "gorn":2,
-    "text":4,
-}
-
-def get_span_list(line):
-    span_list = line.strip().split(";")
-    result = []
-    for span in span_list:
-        a_span = span.split("..")
-        new_span = [int(x) for x in a_span]
-        result.append(new_span)
-    return result
-
-def get_relation(line):
-    parts = line.strip().split(",")
-    result = {
-        "connective":parts[0]
-    }
-    if len(parts)>1:
-        result["class"] = parts[1]
-    return result
-
-def get_arg(sample_lines, arg_name):
-
-    # SpanList
-    result = {"type":arg_name}
-    span_list_line = sample_lines[arg_header_row_mapping["span_list"]]
-    result["arg_span_list"] = get_span_list(span_list_line)
-
-    # text_line = sample_lines[arg_header_row_mapping["text"]]
-    # result["arg_text"] = text_line.strip()
-
-    arg_text_list = [ sample_lines[arg_header_row_mapping["text"]] ]
-    # Check for extra lines  (behaviour forced to be consistent wit Wie Liu's though minor bug detected 20231012
-    pointer = arg_header_row_mapping["text"] + 1
-    while pointer < len(sample_lines) -1:
-        line = sample_lines[pointer]
-
-        if not line.startswith("##############"):
-            arg_text_list.append(line)
-        else:
-            break
-
-        pointer += 1
-
-    arg_text = ", ".join([t.replace("\n","") for t in arg_text_list])   #comma separator is not right, making same as Wei Liu's
-    result["arg_text"] = arg_text
-
-    return result
-
-def pdtb2_sample_reader(sample_lines):
-    """ Rewritten version of Wei Liu's code to extract more contextual information """
-
-    block = {}    #will be a dict of fields for this row/datum
-
-    #First break sample into pre, arg1, arg2 subblocks
-    boundaries = [0] #0, arg1 line, arg2 line;   #value is the START of boundary
-
-    #first line should be the type
-    block["type"] = sample_lines[0].strip()
-
-    #Find segmentations for PRE, ARG1, ARG2 subsections
-    for i,line in enumerate(sample_lines):
-        c_line = line.strip()
-        if c_line in annot_arg_strings:
-            boundaries.append(i)
-
-
-    ########################################
-    #process PRE
-    ########################################
-    pre_sample_lines = sample_lines[boundaries[0]:boundaries[1]]
-
-    if block["type"] in annot_relation_strings:
-        # Relation
-        relation_line = pre_sample_lines[selection_header_row_mapping["rel_info"]]
-        block["relation"] = get_relation(relation_line)
-
-    if block["type"] in annot_has_selection_string:
-        # OPTION 1. this is an Explicit or AltLex relation, look for a selection SpanList + GornList
-        #SpanList
-        span_list_line = pre_sample_lines[selection_header_row_mapping["span_list"]]
-        block["main_span_list"] = get_span_list(span_list_line)
-    else:
-        #this annotation has an inference_site
-
-        #String position
-        string_pos_line = pre_sample_lines[inference_site_header_row_mapping["string_pos"]]
-        block["string_pos"] = int(string_pos_line.strip())
-
-        #Sentence Number
-        sent_num_line = pre_sample_lines[inference_site_header_row_mapping["sent_num"]]
-        block["sent_num"] = int(sent_num_line.strip())
-
-
-    ########################################
-    #process ARG1
-    ########################################
-    arg1_sample_lines = sample_lines[boundaries[1]:boundaries[2]]
-    block[R_ARG1] = get_arg(arg1_sample_lines, R_ARG1)
-
-
-    ########################################
-    #process ARG2
-    ########################################
-    arg2_sample_lines = sample_lines[boundaries[2]:]
-    block[R_ARG2] = get_arg(arg2_sample_lines, R_ARG2)
-
-    return block
-
-def pdtb2_file_reader(input_file):
-    """Unchanged from Wei Liu's original"""
-    all_samples = []
-    with open(input_file, "r", encoding="ISO-8859-1") as f:
-        lines = f.readlines()
-        sample_boundaries = []
-        for idx, line in enumerate(lines):
-            line = line.strip()
-            if "____Explicit____" in line or "____NoRel____" in line or "____EntRel____" in line \
-                    or "____Implicit____" in line or "____AltLex____" in line:
-                sample_boundaries.append(idx)
-
-        sample_boundaries.append(idx) # add the last one
-        boundary_size = len(sample_boundaries)
-        for idx in range(boundary_size-1):
-            sample_lines = lines[sample_boundaries[idx]:sample_boundaries[idx+1]]
-            sample = pdtb2_sample_reader(sample_lines)
-            all_samples.append(sample)
-            # if sample["relation_type"] == "Implicit":
-            #     all_samples.append(sample)
-
-    return all_samples
-
-
-def read_raw(filename):
-    text = None
-    with open(filename, encoding="latin-1") as file:  # PDTB2 encoded as ascii (not utf-8)
-        text = file.read()
-    return text
-
-def add_context(annotations, raw_text, consider_all=False, emphasise_connectives=False):
-
-    #assuming annotations are in order
-    arg1s = {}
-    arg2s = {}
-
-    dependencies = {}
-    dependency_offsets = {}
-
-    mode1_stats = {
-        "found":0,
-        "not_found":0,
-        R_ENTREL:0,
-        R_IMPLICIT:0,
-        R_EXPLICIT:0,
-        R_NOREL:0,
-        R_ALTLEX:0
-    }
-
-    for i,annotation in enumerate(annotations):
-        annotation["context"] = None
-
-        #save args to internal dicts
-        arg1 = annotation[R_ARG1]["arg_text"]
-        arg2 = annotation[R_ARG2]["arg_text"]
-        # Find the earliest point to trackback to find context
-        arg1_start = annotation[R_ARG1]["arg_span_list"][0][0] #1st element, 1st offset
-        arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
-        if not arg1 in arg1s.keys():
-            arg1s[arg1] = [i]
-        else:
-            arg1s[arg1].append(i)
-
-        if not arg2 in arg2s.keys():
-            arg2s[arg2] = [i]
-        else:
-            arg2s[arg2].append(i)
-
-        annotation["context"] = {}
-        #Mode 0
-        if raw_text:   #so assuming there's original content to get context
-
-            context = ""
-            # print(f"Arg start chars: {arg1_start} {arg2_start}")
-            arg_start_min = min(arg1_start, arg2_start)
-            # print(f"min: {arg_start_min}")
-            context = raw_text[:arg_start_min]
-
-            # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
-            annotation["context"]["raw"] = context
-
-        #Mode 1-99: use gold context
-        if True: #mode < 100:
-
-            found_match = None
-            for an_arg2 in arg2s.keys():
-                if arg1 in an_arg2 or an_arg2 in arg1:  #some nested substring exists:
-                    found_match = an_arg2
-
-            if found_match:
-                # print(f"FOUND prior dependency: ARG1: {arg1}, found_match: {found_match}, ARG2: {arg2} ")
-                mode1_stats["found"] += 1
-
-                #We loop over all data points with this prior arg2 which might break linear order of text but this is rare.
-                dep_context = []
-                dep_context_offsets = []
-                for dep_id in arg2s[found_match]:
-
-                    prior_dep = annotations[dep_id]
-
-                    # print(f"prior_dep: \n {json.dumps(prior_dep, indent=3)}")
-
-                    prior_arg = prior_dep[R_ARG1]["arg_text"]
-                    prior_connective = prior_dep["conn"]
-                    prior_discourse_type = prior_dep["type"]
-                    candidate_prior_arg = prior_arg
-
-                    # position tuple is in a list (usually singleton); take 1st
-                    prior_arg_start = prior_dep[R_ARG1]["arg_span_list"][0][0]
-                    # position tuple is in a list (usually singleton); take 2nd
-                    prior_arg_end = prior_dep[R_ARG1]["arg_span_list"][0][1]
-                    earliest_char_pos = prior_arg_start
-                    latest_char_pos = prior_arg_end
-
-                    if prior_discourse_type in annot_has_relationship:
-                        #find the prior_arg and conn offsets and find the outer set (maximal string)
-
-                        prior_connective_positions = None
-                        if prior_discourse_type == R_IMPLICIT:
-                            # it's a nominal char position where the connective would be inserted.
-                            prior_connective_position = prior_dep["string_pos"]
-                            if emphasise_connectives:
-                                if prior_connective_position < prior_arg_start :
-                                    candidate_prior_arg = " "+prior_connective+" "+candidate_prior_arg
-                                else:
-                                    candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
-
-                                # if prior_connective_position < prior_arg_start:
-                                #     candidate_prior_arg = " # " + prior_connective + " @ " + candidate_prior_arg
-                                # else:
-                                #     candidate_prior_arg = candidate_prior_arg + " # " + prior_connective + " @ "
-
-                        else:
-                            #could be a range
-                            prior_connective_position_tuple = prior_dep["main_span_list"]
-                            prior_connective_positions = prior_connective_position_tuple[0]
-                            prior_connective_start = prior_connective_positions[0]
-
-                            #prior_connective_positions are now set
-
-                            #Connective could come before arg1: e.g., Although ARG1 ... ARG2
-                            earliest_char_pos = (prior_arg_start) if \
-                                (prior_arg_start < prior_connective_start) else prior_connective_start
-
-                            #always use prior_arg_end because if the connective comes after it is the start of a new sent
-                            candidate_prior_arg = raw_text[earliest_char_pos:prior_arg_end]
-                            # if prior_connective_position[1] > prior_arg_end:
-
-                            if emphasise_connectives:
-                                if prior_connective_start < prior_arg_start:
-                                    candidate_prior_arg = " " + prior_connective + " " + candidate_prior_arg
-                                else:
-                                    candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
-
-                                # if prior_connective_position < prior_arg_start:
-                                #     candidate_prior_arg = " #_ " + prior_connective + " _@ " + candidate_prior_arg
-                                # else:
-                                #     candidate_prior_arg = candidate_prior_arg + " #_ " + prior_connective + " _@ "
-
-                    mode1_stats[prior_discourse_type] += 1
-
-                    #find preceding (accumulated) dependencies
-                    if prior_arg in dependencies.keys():
-                        #need to iterate to *copy* content (i.e., duplicate) to new dep_context for THIS data point
-                        for deps in dependencies[prior_arg]:
-                            dep_context.append(deps)
-                        for deps_start, deps_end in dependency_offsets[prior_arg]:
-                            dep_context_offsets.append((deps_start, deps_end))  #duplicate tuple
-
-                    #Only use (explicit or implicitly marked) discourse relationships
-                    if (consider_all and prior_discourse_type in annot_exists) or \
-                        (prior_discourse_type in annot_has_relationship):
-                            # print(f"prior connective: {prior_connective}")
-                            dep_context.append(candidate_prior_arg)
-                            dep_context_offsets.append((earliest_char_pos, latest_char_pos))
-
-                # print(f"len(chained_context): {len(dep_context)}: {dep_context}\n")
-                annotation["context"]["chained"] = dep_context
-                annotation["context"]["chained_offsets"] = dep_context_offsets
-                annotation["context"]["chained_source_ids"] = arg2s[found_match]
-
-                #accumulate dependencies for this matched arg1
-                dependencies[arg1] = dep_context
-                dependency_offsets[arg1] = dep_context_offsets
-
-            else:
-                # print(f"NOT FOUND prior dependency: ARG1: {arg1}, dependencies: {None}")
-                annotation["context"]["chained"] = []
-                annotation["context"]["chained_offsets"] = []
-                annotation["context"]["chained_source_ids"] = []
-                mode1_stats["not_found"] += 1
-
-    print(f"SUMMARY mode1_stats: {mode1_stats}")
-    return annotations
 
 from transformers import AutoTokenizer
 
@@ -410,13 +72,19 @@ def is_same_datapoint(point1, point2):
 
     return FLAG_checkgood
 
-def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
+mode_use_offsets = 0
+mode_use_annotations = 1
+mode_use_joen = 2
+def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context_size=0):
     """
     This method intercepts the "cur_samples" data structure and adds extra context information to the samples.
 
     Modes:
     0: use the raw context where offsets use to find all preceding text leading up to ARG1
-    1-99: use the *last* (most recent) n (n=mode#) immediate context, where a relationship was annotated.
+    1: use annotations (dependent on context size)
+    2: use automatic segmentation from Sungho Joen (dependent on context size)
+
+    context_size: 1-99: use the *last* (most recent) n (n=mode#) immediate context, where a relationship was annotated.
     """
 
     # This method relies on the original data reading code of ConnRel (ACL 2023)
@@ -462,7 +130,19 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
 
     #STEP 4. Extract context
     FLAG_consider_all = False
-    annotations = add_context(annotations, raw_contents, consider_all=FLAG_consider_all, emphasise_connectives=True)
+    if mode in [mode_use_offsets, mode_use_annotations]:
+        context_manager = ContextManagerPDTB2()
+        annotations = context_manager.add_context(annotations, raw_contents,
+                                                  consider_all=FLAG_consider_all,
+                                                  emphasise_connectives=True,
+                                                  context_mode=mode)
+    # elif mode == mode_use_joen:
+    #     context_manager = ContextManagerPDTB2()
+    #     annotations = context_manager.add_context(annotations, raw_contents,
+    #                                               consider_all=FLAG_consider_all,
+    #                                               emphasise_connectives=True,
+    #                                               context_mode=mode,
+    #                                               context_size=context_size)
 
     #STEP 5. integrate results with the original dicts.
     result = []
@@ -485,9 +165,9 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                 some_context = annotations[i]["context"]["raw"]
 
             #MODE 1: Context== most recent n (n=mode#) relationship where this sent/arg was an ARG2
-            else:
-                if mode < 100:
-                    #1 < mode < 99: means amount of gold relationships to use
+            elif mode==1:
+                if context_size > 0: #Need to the prune context as needed
+                    #1 < context_size < 99: means amount of gold relationships to use
                     some_context = ""
                     chained_context = annotations[i]["context"]["chained"]
                     chained_context_offsets = annotations[i]["context"]["chained_offsets"]
@@ -506,11 +186,11 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
                         #clobber original chained_context
                         chained_context = processed_chained_context
 
-                        offset = mode
+                        offset = context_size
                         if offset > len(chained_context):
                             offset = len(chained_context)
 
-                        some_context = chained_context[-offset:]  #mode is number of contect sentences to use
+                        some_context = chained_context[-offset:]  #context_size is number of context sentences to use
 
                         #store offset dist
                         if not offset in context_len_dist.keys():
@@ -529,7 +209,7 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0):
             sample["context_mode"] = mode
 
             #trace writes to debug
-            if mode > 0:
+            if context_size > 0:
                 #have to use Wei Liu's relation strings (so no ___ before and after the type label
                 if len(sample["context_full_procecssed_chain"]) > 0  and sample["relation_type"]=="Implicit":
                     print(f"-----------\n {json.dumps(sample, indent=3)} \n -----------------")
