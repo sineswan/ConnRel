@@ -1,3 +1,4 @@
+import regex as re
 
 #referencing the fileformat.pdf documentation for PDTB2 outlining BDF rules for the annotation
 R_ARG1 = "____Arg1____"
@@ -170,6 +171,130 @@ def pdtb2_file_reader(input_file):
 
     return all_samples
 
+def pdtb3_file_reader(data_file, label_file):
+    """
+    Based one original function by Wei Liu:
+    https://github.com/liuwei1206/ConnRel/blob/907e7fa676fe58197f0638a2673c058f778227b6/preprocessing.py#L193
+
+    Args:
+        data_file: file path for raw text data
+        label_file: label info for each data
+    """
+    all_samples = []
+
+    with open(data_file, "r", encoding="latin1") as f: # utf-8
+        text_data = f.read()
+
+    with open(label_file, "r", encoding="latin1") as f: # utf-8
+        lines = f.readlines()
+        for line in lines:
+            if line:
+                items = line.split("|")
+
+                relation_type = items[0].strip()
+                conn1 = items[7].strip()
+                conn1_sense1 = items[8].strip()
+                conn2 = items[10].strip()
+                conn2_sense1 = items[11].strip()
+
+                arg1_idx = items[14].split(";")
+                arg2_idx = items[20].split(";")
+                arg1_str = []
+                for pairs in arg1_idx:
+                    arg1_i, arg1_j = pairs.split("..")
+                    arg1 = text_data[int(arg1_i):int(arg1_j)+1]
+                    arg1_str.append(re.sub("\n", " ", arg1))
+                arg1 = ", ".join(arg1_str)
+
+                arg2_str = []
+                for pairs in arg2_idx:
+                    if pairs == "":
+                        continue
+                    arg2_i, arg2_j = pairs.split("..")
+                    arg2 = text_data[int(arg2_i):int(arg2_j)+1]
+                    arg2_str.append(re.sub("\n", " ", arg2))
+                arg2 = ", ".join(arg2_str)
+
+                if int(arg1_idx[0].split("..")[0]) > int(arg2_idx[0].split("..")[0]):
+                    tmp = arg1
+                    arg1 = arg2
+                    arg2 = tmp
+
+                provenance = items[32].strip().lower()
+                if "pdtb2" in provenance:
+                    if "same" in provenance:
+                        annotate_flag = "pdtb2.same"
+                    elif "changed" in provenance:
+                        annotate_flag = "pdtb2.changed"
+                elif "pdtb3" in provenance:
+                    annotate_flag = "pdtb3.new"
+
+                sample = {}
+                sample["relation_type"] = relation_type
+                if conn1 and conn2:
+                    sample["conn"] = conn1 + "##" + conn2
+                elif conn1:
+                    sample["conn"] = conn1
+                elif conn2:
+                    sample["conn"] = conn2
+                else:
+                    sample["conn"] = ""
+
+                if conn1_sense1 and conn2_sense1:
+                    sample["relation_class"] = conn1_sense1 + "##" + conn2_sense1
+                elif conn1_sense1:
+                    sample["relation_class"] = conn1_sense1
+                elif conn2_sense1:
+                    sample["relation_class"] = conn2_sense1
+                else:
+                    sample["relation_class"] = ""
+
+                sample["arg1"] = arg1
+                sample["arg2"] = arg2
+                sample["annotate_flag"] = annotate_flag
+
+                #--------------------------------------------
+                # WAN (20231213): adding some extra attributes
+                #--------------------------------------------
+
+                #extra: dict structure for arg2
+                sample["type"] = relation_type
+                arg1_span_list = []
+                for pairs in arg1_idx:
+                    arg1_i, arg1_j = pairs.split("..")
+                    arg1_span_list.append([int(arg1_i), int(arg1_j)])
+
+                sample[R_ARG1] = {
+                    "arg_text":arg1,
+                    "arg_span_list":arg1_span_list
+                }
+
+                #extra: dict structure for arg2
+                arg2_span_list = []
+                for pairs in arg2_idx:
+                    arg2_i, arg2_j = pairs.split("..")
+                    arg2_span_list.append([int(arg2_i), int(arg2_j)])
+
+                sample[R_ARG2] = {
+                    "arg_text":arg2,
+                    "arg_span_list":arg2_span_list
+                }
+
+                #extra: record connective offset(s)
+                connective_location = items[-3]
+                if relation_type in annot_has_selection_string:
+                    # OPTION 1. this is an Explicit or AltLex relation, look for a selection SpanList + GornList
+                    # SpanList
+                    sample["main_span_list"] = get_span_list(connective_location)
+                else:
+                    # this annotation has an inference_site
+
+                    # String position
+                    sample["string_pos"] = int(connective_location.strip())
+
+                all_samples.append(sample)
+
+    return all_samples
 
 def read_raw(filename):
     text = None

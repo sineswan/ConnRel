@@ -1,5 +1,5 @@
 from data_wrapper.context_manager_pdtb2_default import ContextManagerPDTB2
-from data_wrapper.pdtb2_data_wrapper import *
+from data_wrapper.pdtb_data_wrapper import *
 from data_wrapper.jeon_discourse_segment_data_wrapper import JeonSegmentReader
 
 import difflib
@@ -51,10 +51,7 @@ class ContextManagerJoen(ContextManagerPDTB2):
 
             # save args to internal dicts
             arg1 = annotation[R_ARG1]["arg_text"]
-            arg2 = annotation[R_ARG2]["arg_text"]
-            # Find the earliest point to trackback to find context
-            arg1_start = annotation[R_ARG1]["arg_span_list"][0][0]  # 1st element, 1st offset
-            arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
+            # arg2 = annotation[R_ARG2]["arg_text"]
 
             #Pseudocode:
             # 1. find best Jeon sentence that aligns with arg1
@@ -67,15 +64,39 @@ class ContextManagerJoen(ContextManagerPDTB2):
 
             # print(f"TRACE: target:{arg1}, best: {matched_sent}, id:{sent_id}")
 
-            #mode B
-            sentences = self.jeon_segment_reader.sentences[doc_id]["sentences"]
-            if sent_id>-1:
-                end_slice = sent_id
-                if end_slice > len(sentences):
-                    end_slice = -1
+            # 2. Mode A: Retrieve the segment that the sentence belongs to.
+            seg_id = self.jeon_segment_reader.discourse_segments_inverted_index[doc_id][sent_id]
+
+            sentences = None
+            if context_mode==2:
+                #mode A
+                segment_sent_ids = self.jeon_segment_reader.discourse_segments[doc_id]["segments"][seg_id]
+                sentences = []
+                org_sentences = self.jeon_segment_reader.sentences[doc_id]["sentences"]
+                for seg_sent_id in segment_sent_ids:
+                    if seg_sent_id == sent_id:
+                        break   #assuming seg_sent_ids are in ascending order
+                    else:
+                        sentences.append(org_sentences[seg_sent_id])
                 annotation["context"] = {}
-                annotation["context"]["chained"] = sentences[:end_slice]  #everything up to the aligned sentence
+                annotation["context"]["chained"] = sentences      # everything up to the aligned sentence
+
+            elif context_mode==3:
+                #mode B
+                sentences = self.jeon_segment_reader.sentences[doc_id]["sentences"]
+
+                # 3/4 Retrieve prior sentences from which even sentence list is used
+                if sent_id > -1:
+                    end_slice = sent_id
+                    # if end_slice > len(sentences):
+                    #     end_slice = -1
+                    annotation["context"] = {}
+                    annotation["context"]["chained"] = sentences[:end_slice]  # everything up to the aligned sentence
+                else:
+                    print(f"TRACE: no alignment: target:{arg1}, best: {matched_sent}, id:{sent_id}")
+
             else:
-                print(f"TRACE: no alignment: target:{arg1}, best: {matched_sent}, id:{sent_id}")
+                raise Exception(f"unknown context mode: {context_mode}")
+
 
         return annotations

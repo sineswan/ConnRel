@@ -1,4 +1,4 @@
-from data_wrapper.pdtb2_data_wrapper import *
+from data_wrapper.pdtb_data_wrapper import *
 
 class ContextManagerPDTB2:
 

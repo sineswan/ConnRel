@@ -5,8 +5,9 @@ import json
 import os
 import re
 import csv
+import random
 
-from data_wrapper import pdtb2_context_extension
+from data_wrapper import pdtb_context_extension
 from data_wrapper.jeon_discourse_segment_data_wrapper import JeonSegmentReader
 
 def getConnLabel(text_array, is_altlex=False):
@@ -155,9 +156,10 @@ def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=
 
         #extract context only if the PDTB raw text directory is provided
         if raw_text_dir:
-            cur_samples = pdtb2_context_extension.read_pdtb2_sample(cur_samples, file_name, raw_text_dir,
-                                                                    context_mode, context_size,
-                                                                    jeon_segment_reader)
+            cur_samples = pdtb_context_extension.read_pdtb_sample(cur_samples, file_name, raw_text_dir,
+                                                                   dataset="pdtb2",
+                                                                   mode=context_mode, context_size=context_size,
+                                                                   jeon_segment_reader=jeon_segment_reader)
         all_samples.extend(cur_samples)
 
     with open(out_file_name, "w", encoding="utf-8") as f:
@@ -246,7 +248,10 @@ def pdtb3_file_reader(data_file, label_file):
 
     return all_samples
 
-def refine_raw_data_pdtb3(source_dir, gold_dir, data_list, output_dir, mode):
+def refine_raw_data_pdtb3(source_dir, gold_dir, data_list, output_dir, mode,
+                          context_mode=None, context_size=None,
+                          jeon_segment_reader=None
+                          ):
     """
     Args:
         source_dir: raw data
@@ -278,6 +283,16 @@ def refine_raw_data_pdtb3(source_dir, gold_dir, data_list, output_dir, mode):
     for file_name in all_file_paths:
         print(file_name[0], file_name[1])
         cur_samples = pdtb3_file_reader(file_name[0], file_name[1])
+
+
+        #extract context only if the PDTB raw text directory is provided
+        if context_mode:
+            #file_name[0]: raw_text
+            #file_name[1]: label_file
+            cur_samples = pdtb_context_extension.read_pdtb_sample(cur_samples, file_name[0], file_name[1],
+                                                                   dataset="pdtb2",
+                                                                   mode=context_mode, context_size=context_size,
+                                                                   jeon_segment_reader=jeon_segment_reader)
         all_samples.extend(cur_samples)
 
     print(len(all_samples))
@@ -461,16 +476,25 @@ if __name__ == "__main__":
     output_dir = "data/dataset/pdtb3/fine"
     os.makedirs(output_dir, exist_ok=True)
     mode = "train"
-    # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode)
+    refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                          context_mode=context_mode, context_size=context_size,
+                          jeon_segment_reader=jeon_segment_reader
+                          )
 
     data_list = ["00", "01"]
     mode = "dev"
-    # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode)
+    refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                          context_mode=context_mode, context_size=context_size,
+                          jeon_segment_reader=jeon_segment_reader
+                          )
 
     data_list = ["21", "22"]
     mode = "test"
-    # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode)
-    # generate_label_file(output_dir)
+    refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                          context_mode=context_mode, context_size=context_size,
+                          jeon_segment_reader=jeon_segment_reader
+                          )
+    generate_label_file(output_dir)
 
     ## 2 Xval
     # X-validation

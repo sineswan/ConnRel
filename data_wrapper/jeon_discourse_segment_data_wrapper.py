@@ -7,10 +7,26 @@ class JeonSegmentReader:
         self.discourse_segments_filename = discourse_segments_filename
         self.sentences = None
         self.discourse_segments = None
+        self.discourse_segments_inverted_index = None
 
         self.sentences = self.reader_sentences(sentence_segment_filename)
         self.discourse_segments = self.reader_discourse_segments(discourse_segments_filename)
-        self.cleanup()
+        self.cleanup()  #needed to repair discourse segments if segment data is missing
+
+        #create discourse segment inverted index
+        self.discourse_segments_inverted_index = self.create_segments_inverted_index()
+
+    def create_segments_inverted_index(self):
+        result = {}   #key: doc_id, value={ sent_id: segment_id, .... }
+        for doc_id in self.discourse_segments.keys():
+            segments = self.discourse_segments[doc_id]["segments"]
+            inverted_index = {} #{ sent_id: segment_id, .... }
+            for segment_id in segments.keys():
+                sentences = self.discourse_segments[doc_id]["segments"][segment_id]
+                for sent_id in sentences:
+                    inverted_index[sent_id] = segment_id
+            result[doc_id] = inverted_index
+        return result
 
     def cleanup(self):
         print(f"size sents: {len(self.sentences.keys())}, size segments: {len(self.discourse_segments.keys())}")
@@ -50,7 +66,7 @@ class JeonSegmentReader:
 
     def reader_discourse_segments(self, discourse_segments_filename):
 
-        result = {}  #key:id, value={"segments": {"seg_id":<d>, "sentence_ids":[list of nums] .... }, "sent_ids": [list of nums] }
+        result = {}  #key:doc_id, value={"segments": {seg_id:[list of sent_ids] .... }, "sent_ids": [list of nums] }
         with open(discourse_segments_filename) as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=',')
             line_count = 0
@@ -101,3 +117,4 @@ if __name__ == "__main__":
 
 
     print(f"{json.dumps(reader.sentences, indent=3)}")
+    print(f"{json.dumps(reader.discourse_segments_inverted_index, indent=3)}")

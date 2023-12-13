@@ -2,7 +2,7 @@ import os, json
 
 from data_wrapper.context_manager_pdtb2_default import ContextManagerPDTB2
 from data_wrapper.span_unentangler import SpanUnentangler
-from data_wrapper.pdtb2_data_wrapper import *
+from data_wrapper.pdtb_data_wrapper import *
 from data_wrapper.context_manager_joen import ContextManagerJoen
 
 from transformers import AutoTokenizer
@@ -39,7 +39,7 @@ def truncate(text, max_length=512):
 
     return truncated_text, truncation_length, org_length
 
-def is_same_datapoint(point1, point2):
+def is_same_datapoint(point1, point2, strip_rel_labels = True):
     # check args and type
     sample_arg1 = point1["arg1"]
     sample_arg2 = point1["arg2"]
@@ -47,7 +47,11 @@ def is_same_datapoint(point1, point2):
 
     contextual_arg1 = point2[R_ARG1]["arg_text"]
     contextual_arg2 = point2[R_ARG2]["arg_text"]
-    contextual_relation_type = point2["type"][4:-4]  # strip off the "___" before and after in e.g.,"____EntRel____"
+    contextual_relation_type = ""
+    if strip_rel_labels:
+        contextual_relation_type = point2["type"][4:-4]  # strip off the "___" before and after in e.g.,"____EntRel____"
+    else:
+        contextual_relation_type = point2["type"]  # for PDTB3, labels should be same.
 
     FLAG_checkgood = True
     if not sample_arg1 == contextual_arg1 or \
@@ -77,10 +81,13 @@ mode_use_annotations = 1
 mode_use_joen = 2
 mode_use_joen_1baseline = 3
 
-def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context_size=0,
-                      jeon_segment_reader=None):
+def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pdtb2", mode=0, context_size=0,
+                     jeon_segment_reader=None):
     """
     This method intercepts the "cur_samples" data structure and adds extra context information to the samples.
+
+    input_filename: if PDTB2, this has the file extension ".pdtb", if PDTB3, just the stub
+    raw_text_location: if PDTB2, this is a directory where all the raw data is kept; if PDTB3, this the exact file
 
     Modes:
     0: use the raw context where offsets use to find all preceding text leading up to ARG1
@@ -102,7 +109,11 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context
     #    5. integrate results with the original dicts.
 
     #STEP 1. Call alternative PDTB2 label file reader
-    annotations = pdtb2_file_reader(input_filename)
+    annotations = None
+    if dataset=="pdtb2":
+        annotations = pdtb2_file_reader(input_filename)
+    elif dataset=="pdtb3":
+        annotations = pdtb3_file_reader(raw_text_location, input_filename)
 
 
     #STEP 1a. Integrate results with the original dicts.
@@ -115,26 +126,32 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context
                 if not key in annotations[i].keys():
                     annotations[i][key] = sample[key]
 
-
-
-    #STEP 2. Analyse the filename to extract the (i) section and (2) filestub
+    # STEP 2. Analyse the filename to extract the (i) section and (2) filestub
     filename = os.path.basename(input_filename)
     section_dir = os.path.dirname(input_filename)
     section_string = os.path.basename(section_dir)
-    file_stub = filename[:-len(".pdtb")]  #strip off the ".pdtb" extension
+    raw_text_filepath = None
 
-    # e.g.,  "id": "00.wsj_0001.000"
+    if dataset== "pdtb2":
+        #Need to figure out location of exact filename for this PDTB2 annotation file
+        file_stub = filename[:-len(".pdtb")]  #strip off the ".pdtb" extension
 
-    # e.g.,  "id": "00.wsj_0001.000"
-    filenum = file_stub.split("_")[1]  # e.g., 0001
-    doc_id = filenum
+        # e.g.,  "id": "00.wsj_0001.000"
 
-    print(f"filename: {filename}, section_str: {section_string}, file_stub:{file_stub}")
+        # e.g.,  "id": "00.wsj_0001.000"
+        filenum = file_stub.split("_")[1]  # e.g., 0001
+        doc_id = filenum
 
-    raw_text_section_dir = os.path.join(raw_text_dir, section_string)
-    raw_text_filepath = os.path.join(raw_text_section_dir, file_stub)
+        print(f"filename: {filename}, section_str: {section_string}, file_stub:{file_stub}")
 
-    #STEP 3. Call the file reader for the raw data with information in step 2.
+        raw_text_dir = raw_text_location
+        raw_text_section_dir = os.path.join(raw_text_dir, section_string)
+        raw_text_filepath = os.path.join(raw_text_section_dir, file_stub)
+
+    elif dataset=="pdtb3":
+        raw_text_filepath = raw_text_location
+
+    # STEP 3. Call the file reader for the raw data with information in step 2.
     raw_contents = read_raw(raw_text_filepath)
 
     #STEP 4. Extract context
@@ -208,6 +225,8 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context
 
                         annotations["context"]["context_full_procecssed_chain"] = processed_chained_context  # store it for later
 
+                # print(f"SUMMARY: Context len dist: {context_len_dist}")  # print to stdout distribution of context offset lengths for this preprocessing job
+
             elif mode==2 or mode==3:
                 #use Jeon segmentations
                 offset = context_size
@@ -236,6 +255,5 @@ def read_pdtb2_sample(cur_samples, input_filename, raw_text_dir, mode=0, context
             #finalise result
             result.append(sample)
 
-    print(f"SUMMARY: Context len dist: {context_len_dist}")  #print to stdout distribution of context offset lengths for this preprocessing job
     return result
 
