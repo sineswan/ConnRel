@@ -140,6 +140,7 @@ def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=
     """
     data_dirs = [os.path.join(source_dir, data) for data in data_list]
     all_file_paths = []
+    all_stats = {}
     for data_dir in data_dirs:
         cur_files = os.listdir(data_dir)
         cur_files = [f for f in cur_files if ".pdtb" in f]
@@ -156,15 +157,30 @@ def refine_raw_data_pdtb2(source_dir, data_list, output_dir, mode, raw_text_dir=
 
         #extract context only if the PDTB raw text directory is provided
         if raw_text_dir:
-            cur_samples = pdtb_context_extension.read_pdtb_sample(cur_samples, file_name, raw_text_dir,
+            cur_samples, stats = pdtb_context_extension.read_pdtb_sample(cur_samples, file_name, raw_text_dir,
                                                                    dataset="pdtb2",
                                                                    mode=context_mode, context_size=context_size,
                                                                    jeon_segment_reader=jeon_segment_reader)
+
+            # update stats
+            if stats:
+                for key in stats.keys():
+                    if not key in all_stats.keys():
+                        all_stats[key] = 0
+                    all_stats[key] += stats[key]
+
         all_samples.extend(cur_samples)
 
     with open(out_file_name, "w", encoding="utf-8") as f:
         for sample in all_samples:
             f.write("%s\n" % (json.dumps(sample, ensure_ascii=False)))
+
+    #Print stats
+    with open(out_file_name + f".{mode}.stats", "w", encoding="utf-8") as f:
+        f.write(f"{json.dumps(all_stats, indent=3)}")
+    print(f"{json.dumps(all_stats, indent=3)}")
+
+
 
 def pdtb3_file_reader(data_file, label_file):
     """
@@ -265,6 +281,7 @@ def refine_raw_data_pdtb3(source_dir, gold_dir, data_list, output_dir, mode,
     and also the github resposity of the model: https://github.com/najoungkim/pdtb3
     """
     all_file_paths = []
+    all_stats = {}
     for data in data_list:
         cur_data_dir = os.path.join(source_dir, data)
         cur_label_dir = os.path.join(gold_dir, data)
@@ -281,24 +298,43 @@ def refine_raw_data_pdtb3(source_dir, gold_dir, data_list, output_dir, mode,
     all_samples = []
     all_file_paths = sorted(all_file_paths)
     for file_name in all_file_paths:
-        print(file_name[0], file_name[1])
+        # print(file_name[0], file_name[1])
+        # cur_samples = pdtb3_file_reader(file_name[0], file_name[1])
+        data_file = file_name[0]
+        label_file = file_name[1]
         cur_samples = pdtb3_file_reader(file_name[0], file_name[1])
-
 
         #extract context only if the PDTB raw text directory is provided
         if context_mode:
             #file_name[0]: raw_text
             #file_name[1]: label_file
-            cur_samples = pdtb_context_extension.read_pdtb_sample(cur_samples, file_name[0], file_name[1],
-                                                                   dataset="pdtb2",
+            cur_samples, stats = pdtb_context_extension.read_pdtb_sample(cur_samples, input_filename=label_file,
+                                                                  raw_text_location=data_file,
+                                                                   dataset="pdtb3",
                                                                    mode=context_mode, context_size=context_size,
-                                                                   jeon_segment_reader=jeon_segment_reader)
+                                                                   jeon_segment_reader=jeon_segment_reader,
+                                                                   FLAG_prepocessing_version=3)
+
+            #update stats
+            if stats:
+                for key in stats.keys():
+                    if not key in all_stats.keys():
+                        all_stats[key] = 0
+                    all_stats[key] += stats[key]
+
+
         all_samples.extend(cur_samples)
 
     print(len(all_samples))
     with open(out_file_name, "w", encoding="utf-8") as f:
         for sample in all_samples:
             f.write("%s\n" % (json.dumps(sample, ensure_ascii=False)))
+
+    #Print stats
+    with open(out_file_name+f".{mode}.stats", "w", encoding="utf-8") as f:
+        f.write(f"{json.dumps(all_stats, indent=3)}")
+    print(f"{mode}: {json.dumps(all_stats, indent=3)}")
+
 
 def refine_raw_data_pcc(source_dir, output_dir):
     file_path = os.path.join(source_dir, "pcc_discourse_relations_all.tsv")
@@ -395,10 +431,11 @@ if __name__ == "__main__":
     ## 1. Ji split
     parser = argparse.ArgumentParser()
     parser.add_argument("--pdtb2_raw_text_dir", default=None)
-    parser.add_argument("--context_mode", type=int, default=0)
+    parser.add_argument("--context_mode", type=int, default=0, help="None:default; 0:all, 1:PDTB_gold, 2:Jeon_segments; 3:Always_last_sentence")
     parser.add_argument("--context_size", type=int, default=0)
     parser.add_argument("--jeon_sentences_filename", type=str, default=None)
     parser.add_argument("--jeon_segments_filename", type=str, default=None)
+    parser.add_argument("--dataset", type=str, default="pdtb2")
     args = parser.parse_args()
     pdtb2_raw_text_dir = args.pdtb2_raw_text_dir
     context_mode = args.context_mode
@@ -415,23 +452,24 @@ if __name__ == "__main__":
     ]
     output_dir = "data/dataset/pdtb2/fine"
     os.makedirs(output_dir, exist_ok=True)
-    mode = "train"
-    refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
-                          jeon_segment_reader=jeon_segment_reader)
+    if args.dataset == "pdtb2":
+        mode = "train"
+        refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                              raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
 
-    data_list = ["00", "01"]
-    mode = "dev"
-    refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
-                          jeon_segment_reader=jeon_segment_reader)
+        data_list = ["00", "01"]
+        mode = "dev"
+        refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                              raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
 
-    data_list = ["21", "22"]
-    mode = "test"
-    refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
-                          jeon_segment_reader=jeon_segment_reader)
-    generate_label_file(output_dir)
+        data_list = ["21", "22"]
+        mode = "test"
+        refine_raw_data_pdtb2(source_dir=source_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                              raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
+        generate_label_file(output_dir)
 
     ## 2. Xval
     # X-validation
@@ -456,13 +494,14 @@ if __name__ == "__main__":
         source_dir = "data/dataset/pdtb2/raw"
         output_dir = "data/dataset/pdtb2/xval/fold_{}".format(idx + 1)
         os.makedirs(output_dir, exist_ok=True)
-        mode = "train"
-        refine_raw_data_pdtb2(source_dir, train_sections[idx], output_dir, mode)
-        mode = "dev"
-        refine_raw_data_pdtb2(source_dir, dev_sections[idx], output_dir, mode)
-        mode = "test"
-        refine_raw_data_pdtb2(source_dir, test_sections[idx], output_dir, mode)
-        generate_label_file(output_dir)
+        if args.dataset == "pdtb2":
+            mode = "train"
+            refine_raw_data_pdtb2(source_dir, train_sections[idx], output_dir, mode)
+            mode = "dev"
+            refine_raw_data_pdtb2(source_dir, dev_sections[idx], output_dir, mode)
+            mode = "test"
+            refine_raw_data_pdtb2(source_dir, test_sections[idx], output_dir, mode)
+            generate_label_file(output_dir)
 
 
     #### PDTB3.0
@@ -475,26 +514,27 @@ if __name__ == "__main__":
     ]
     output_dir = "data/dataset/pdtb3/fine"
     os.makedirs(output_dir, exist_ok=True)
-    mode = "train"
-    refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          context_mode=context_mode, context_size=context_size,
-                          jeon_segment_reader=jeon_segment_reader
-                          )
+    if args.dataset == "pdtb3":
+        mode = "train"
+        # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+        #                       context_mode=context_mode, context_size=context_size,
+        #                       jeon_segment_reader=jeon_segment_reader
+        #                       )
 
-    data_list = ["00", "01"]
-    mode = "dev"
-    refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          context_mode=context_mode, context_size=context_size,
-                          jeon_segment_reader=jeon_segment_reader
-                          )
+        data_list = ["00", "01"]
+        mode = "dev"
+        # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+        #                       context_mode=context_mode, context_size=context_size,
+        #                       jeon_segment_reader=jeon_segment_reader
+        #                       )
 
-    data_list = ["21", "22"]
-    mode = "test"
-    refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-                          context_mode=context_mode, context_size=context_size,
-                          jeon_segment_reader=jeon_segment_reader
-                          )
-    generate_label_file(output_dir)
+        data_list = ["21", "22"]
+        mode = "test"
+        refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                              context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader
+                              )
+        generate_label_file(output_dir)
 
     ## 2 Xval
     # X-validation
@@ -518,13 +558,14 @@ if __name__ == "__main__":
         gold_dir = "data/dataset/pdtb3/raw/gold"
         output_dir = "data/dataset/pdtb3/xval/fold_{}".format(idx + 1)
         os.makedirs(output_dir, exist_ok=True)
-        mode = "train"
-        # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=train_sections[idx], output_dir=output_dir, mode=mode)
-        mode = "dev"
-        # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=dev_sections[idx], output_dir=output_dir, mode=mode)
-        mode = "test"
-        # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=test_sections[idx], output_dir=output_dir, mode=mode)
-        # generate_label_file(output_dir)
+        # if args.dataset == "pdtb3":
+        #     mode = "train"
+        #     # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=train_sections[idx], output_dir=output_dir, mode=mode)
+        #     mode = "dev"
+        #     # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=dev_sections[idx], output_dir=output_dir, mode=mode)
+        #     mode = "test"
+        #     # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=test_sections[idx], output_dir=output_dir, mode=mode)
+        #     # generate_label_file(output_dir)
 
 
     #### PCC

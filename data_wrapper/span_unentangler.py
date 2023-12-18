@@ -12,7 +12,7 @@ class SpanUnentangler:
         - Start with the longest span as the main boundary
 
         and in sorted order of remaining spans (by start_offset)
-        - EXTERMAL Check if span in main boundary, if not (sorted) add span to kept_spans, and increase boundary.
+        - EXTERNAL Check if span in main boundary, if not (sorted) add span to kept_spans, and increase boundary.
         - INTERNAL (island, subsumed, partially overlapping):
             Case 1. for added_span in sorted order(kept_spans):
                 while added_span_start < current span_start
@@ -123,11 +123,12 @@ class SpanUnentangler:
                             # the next added_span, in which case they need to be merged.
                             if overlap == 1: #so some extension needed (and span2 comes AFTER span1; Different from -1 case!!)
 
-                                # print(f"OUTCOME: merging overlap 1")
+                                print(f"OUTCOME: merging overlap 1: span_offset: {span_offset}, chain: {chain}, offsets: {chain_offsets}")
+
 
                                 kept_spans[added_span_start]["end"] = span_offset[1]  #the extension because overlap==1
 
-                                #update text: don't seem to run into this for PDTB2
+                                #20231218: don't seem to run into this for PDTB2  ... but we do for PDTB3
                                 kept_spans[added_span_start]["text"] = "FIXME1"
 
                                 #check that next added_span is still fine
@@ -203,7 +204,7 @@ class SpanUnentangler:
                 #Handled the span_offset, now adjust boundaries if needed
                 boundary = self.maintain_boundary(boundary, span_offset)
 
-        return kept_spans
+        return kept_spans, boundary
 
     def maintain_boundary(self, boundary, span_offset):
 

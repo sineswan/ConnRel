@@ -7,6 +7,8 @@ R_EXPLICIT = "____Explicit____"
 R_IMPLICIT = "____Implicit____"
 R_ENTREL = "____EntRel____"
 R_ALTLEX = "____AltLex____"
+R_ALTLEXC = "____AltLexC____"   #PDTB3 only
+R_HYPOPHORA = "____Hypophora____"   #PDTB3 only
 R_NOREL =  "____NoRel____"
 
 data_splits = { #
@@ -15,11 +17,12 @@ data_splits = { #
 }
 
 annot_relation_strings = [R_EXPLICIT, R_IMPLICIT]
-annot_other_strings = [R_ENTREL, R_ALTLEX, R_NOREL]
+annot_other_strings = [R_ENTREL, R_ALTLEX, R_ALTLEXC, R_NOREL]
 annot_arg_strings = [R_ARG1, R_ARG2]
-annot_has_selection_string = [R_EXPLICIT, R_ALTLEX]  #others have "inferenceSite
-annot_has_relationship = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX]  #has a relationship but ALTLEX has no connective
-annot_exists = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX, R_ENTREL]  #anything but NOREL
+annot_has_selection_string = [R_EXPLICIT, R_ALTLEX, R_ALTLEXC]  #others have "inferenceSite
+annot_has_relationship = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX] #, R_ALTLEXC]  #has a relationship but ALTLEX has no connective
+annot_exists = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX, R_ALTLEXC, R_ENTREL, R_HYPOPHORA]  #anything but NOREL
+annot_all = [R_EXPLICIT, R_IMPLICIT, R_ALTLEX, R_ALTLEXC, R_ENTREL, R_HYPOPHORA, R_NOREL]  #anything but NOREL
 
 #header_row_mapping always assumes 1st element (idx=0) is the subsection type: rel_type, arg1, arg2
 #these are array indices, for an array of strings
@@ -71,7 +74,7 @@ def get_arg(sample_lines, arg_name):
     # result["arg_text"] = text_line.strip()
 
     arg_text_list = [ sample_lines[arg_header_row_mapping["text"]] ]
-    # Check for extra lines  (behaviour forced to be consistent wit Wie Liu's though minor bug detected 20231012
+    # Check for extra lines  (behaviour forced to be consistent with Wei Liu's though minor bug detected 20231012
     pointer = arg_header_row_mapping["text"] + 1
     while pointer < len(sample_lines) -1:
         line = sample_lines[pointer]
@@ -189,6 +192,9 @@ def pdtb3_file_reader(data_file, label_file):
         lines = f.readlines()
         for line in lines:
             if line:
+
+                # print(f"PDTB3 {label_file} line: {line}")
+
                 items = line.split("|")
 
                 relation_type = items[0].strip()
@@ -257,12 +263,18 @@ def pdtb3_file_reader(data_file, label_file):
                 # WAN (20231213): adding some extra attributes
                 #--------------------------------------------
 
+
+                #note that in PDTB3, the relationships NO NOT have pre/suf-fix of "____".
+                #  whereas, code fore PDTB2 (current) expects these *fixes.
+                relation_type_key = f"____{relation_type}____"
+
                 #extra: dict structure for arg2
-                sample["type"] = relation_type
+                sample["type"] = relation_type_key
                 arg1_span_list = []
                 for pairs in arg1_idx:
-                    arg1_i, arg1_j = pairs.split("..")
-                    arg1_span_list.append([int(arg1_i), int(arg1_j)])
+                    if pairs:   #could be empty string
+                        arg1_i, arg1_j = pairs.split("..")
+                        arg1_span_list.append([int(arg1_i), int(arg1_j)])
 
                 sample[R_ARG1] = {
                     "arg_text":arg1,
@@ -272,8 +284,9 @@ def pdtb3_file_reader(data_file, label_file):
                 #extra: dict structure for arg2
                 arg2_span_list = []
                 for pairs in arg2_idx:
-                    arg2_i, arg2_j = pairs.split("..")
-                    arg2_span_list.append([int(arg2_i), int(arg2_j)])
+                    if pairs:   #could be empty string
+                        arg2_i, arg2_j = pairs.split("..")
+                        arg2_span_list.append([int(arg2_i), int(arg2_j)])
 
                 sample[R_ARG2] = {
                     "arg_text":arg2,
@@ -282,7 +295,9 @@ def pdtb3_file_reader(data_file, label_file):
 
                 #extra: record connective offset(s)
                 connective_location = items[-3]
-                if relation_type in annot_has_selection_string:
+
+
+                if relation_type_key in annot_has_selection_string:
                     # OPTION 1. this is an Explicit or AltLex relation, look for a selection SpanList + GornList
                     # SpanList
                     sample["main_span_list"] = get_span_list(connective_location)

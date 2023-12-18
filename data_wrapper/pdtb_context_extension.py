@@ -1,6 +1,6 @@
 import os, json
 
-from data_wrapper.context_manager_pdtb2_default import ContextManagerPDTB2
+from data_wrapper.context_manager_pdtb_default import ContextManagerPDTB2
 from data_wrapper.span_unentangler import SpanUnentangler
 from data_wrapper.pdtb_data_wrapper import *
 from data_wrapper.context_manager_joen import ContextManagerJoen
@@ -49,7 +49,7 @@ def is_same_datapoint(point1, point2, strip_rel_labels = True):
     contextual_arg2 = point2[R_ARG2]["arg_text"]
     contextual_relation_type = ""
     if strip_rel_labels:
-        contextual_relation_type = point2["type"][4:-4]  # strip off the "___" before and after in e.g.,"____EntRel____"
+        contextual_relation_type = point2["type"][4:-4]  # strip off the "____" before and after in e.g.,"____EntRel____"
     else:
         contextual_relation_type = point2["type"]  # for PDTB3, labels should be same.
 
@@ -82,7 +82,9 @@ mode_use_joen = 2
 mode_use_joen_1baseline = 3
 
 def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pdtb2", mode=0, context_size=0,
-                     jeon_segment_reader=None):
+                     jeon_segment_reader=None,
+                     FLAG_prepocessing_version=2
+                    ):
     """
     This method intercepts the "cur_samples" data structure and adds extra context information to the samples.
 
@@ -95,6 +97,9 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
     2: use automatic segmentation from Sungho Joen (dependent on context size)
 
     context_size: 1-99: use the *last* (most recent) n (n=mode#) immediate context, where a relationship was annotated.
+
+    FLAG_prepocessing_version added 20121218.  Prior notes refer to preprocesing version >=2, so 2 is the default.
+
     """
 
     # This method relies on the original data reading code of ConnRel (ACL 2023)
@@ -132,13 +137,12 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
     section_string = os.path.basename(section_dir)
     raw_text_filepath = None
 
+    doc_id = None
+    file_stub = None
     if dataset== "pdtb2":
         #Need to figure out location of exact filename for this PDTB2 annotation file
         file_stub = filename[:-len(".pdtb")]  #strip off the ".pdtb" extension
 
-        # e.g.,  "id": "00.wsj_0001.000"
-
-        # e.g.,  "id": "00.wsj_0001.000"
         filenum = file_stub.split("_")[1]  # e.g., 0001
         doc_id = filenum
 
@@ -150,21 +154,25 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
     elif dataset=="pdtb3":
         raw_text_filepath = raw_text_location
+        raw_filename = os.path.basename(raw_text_filepath)   #eg. wsj_0002 -> 0002
+        doc_id = raw_filename.split("_")[1]
+        file_stub = raw_filename
 
     # STEP 3. Call the file reader for the raw data with information in step 2.
     raw_contents = read_raw(raw_text_filepath)
 
     #STEP 4. Extract context
     FLAG_consider_all = False
+    stats = None
     if mode in [mode_use_offsets, mode_use_annotations]:
         context_manager = ContextManagerPDTB2()
-        annotations = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
+        annotations, stats = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
                                                   consider_all=FLAG_consider_all,
                                                   emphasise_connectives=True,
                                                   context_mode=mode)
     elif mode == mode_use_joen or mode == mode_use_joen_1baseline:
         context_manager = ContextManagerJoen(jeon_segment_reader)
-        annotations = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
+        annotations, _ = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
                                                   consider_all=FLAG_consider_all,
                                                   emphasise_connectives=True,
                                                   context_mode=mode)
@@ -177,7 +185,8 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
         if is_same_datapoint(sample, annotations[i]):
 
             #Add extra provenance data
-            sample['id'] = f"{section_string}.{file_stub}.{i:03d}"
+            # sample['id'] = f"{section_string}.{file_stub}.{i:03d}"
+            sample['id'] = f"{section_string}.{doc_id}.{i:03d}"
             sample['section'] = section_string
             sample['filestub'] = file_stub
             sample['arg1_org'] = sample['arg1']
@@ -185,15 +194,17 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
             some_context = ""
             processed_chained_context = []
+            new_arg1_string = sample["arg1"]  #default no change
             #Mode 0: Context== all preceding leading up to ARG1
             if mode==0:
                 some_context = annotations[i]["context"]["raw"]
+                new_arg1_string = some_context + " " + sample["arg1"]           #creating the new string depends on mode
+
 
             #MODE 1: Context== most recent n (n=mode#) relationship where this sent/arg was an ARG2
             elif mode==1:
                 if context_size > 0: #Need to the prune context as needed
                     #1 < context_size < 99: means amount of gold relationships to use
-                    some_context = ""
                     chained_context = annotations[i]["context"]["chained"]
                     chained_context_offsets = annotations[i]["context"]["chained_offsets"]
                     # print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
@@ -202,7 +213,7 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         # print(f"\n {chained_context_offsets}")
 
                         unentangler = SpanUnentangler()
-                        kept_spans = unentangler.make_non_overlapping_context_chain(chained_context, chained_context_offsets)
+                        kept_spans, boundary = unentangler.make_non_overlapping_context_chain(chained_context, chained_context_offsets)
 
                         processed_chained_context = []
                         for key in sorted(kept_spans.keys()):
@@ -215,7 +226,7 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         if offset > len(chained_context):
                             offset = len(chained_context)
 
-                        some_context = chained_context[-offset:]  #context_size is number of context sentences to use
+                        some_context_list = chained_context[-offset:]  #context_size is number of context sentences to use
 
                         #store offset dist
                         if not offset in context_len_dist.keys():
@@ -223,7 +234,25 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         else:
                             context_len_dist[offset] += 1
 
-                        annotations["context"]["context_full_procecssed_chain"] = processed_chained_context  # store it for later
+                        annotations[i]["context"]["context_full_processed_chain"] = processed_chained_context  # store it for later
+
+                        #now add the context
+                        some_context = ". ".join(some_context_list)
+                        new_arg1_string = some_context + " " + sample["arg1"]           #creating the new string depends on mode
+
+                        if FLAG_prepocessing_version==3:
+                            context_and_args = [x for x in some_context_list]
+                            context_and_args.append(sample["arg1"])
+                            context_and_args_offsets = [boundary, annotations[i][R_ARG1]["arg_span_list"][0]]  #take 1st offset in arg1 span_list
+
+                            merged_context_arg1, merged_boundary = \
+                                unentangler.make_non_overlapping_context_chain(context_and_args, context_and_args_offsets)
+
+                            merged_context_arg1_texts = []
+                            for key in sorted(merged_context_arg1.keys()):
+                                merged_context_arg1_texts.append(merged_context_arg1[key]["text"])
+
+                            new_arg1_string = " ".join(merged_context_arg1_texts)
 
                 # print(f"SUMMARY: Context len dist: {context_len_dist}")  # print to stdout distribution of context offset lengths for this preprocessing job
 
@@ -234,26 +263,28 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                 if offset > len(chained_context):
                     offset = len(chained_context)
 
-                some_context = chained_context[-offset:]  # context_size is number of context sentences to use
+                some_context_list = chained_context[-offset:]  # context_size is number of context sentences to use
+                some_context = ". ".join(some_context_list)
+                new_arg1_string = some_context + " " + sample["arg1"]           #creating the new string depends on mode
 
             #add context info to sample (no matter which mode)
-            sample["context"] = ". ".join(some_context)
             sample["context_provenance"] = annotations[i]["context"]
 
             #Apply truncation regardless of context mode type
-            new_string = sample["context"] + " " + sample["arg1"]
-            sample['arg1'], sample['truncation_length'], sample['arg1_org_len'] = truncate(new_string)
+            sample["context"] = some_context
+            # new_string = some_context + " " + sample["arg1"]
+            sample['arg1'], sample['truncation_length'], sample['arg1_org_len'] = truncate(new_arg1_string)
             sample["context_mode"] = mode
             sample["context_size"] = context_size
 
             # #trace writes to debug
-            # if context_size > 0:
-            #     #have to use Wei Liu's relation strings (so no ___ before and after the type label
-            #     if len(sample["context_full_procecssed_chain"]) > 0  and sample["relation_type"]=="Implicit":
-            #         print(f"-----------\n {json.dumps(sample, indent=3)} \n -----------------")
+            if context_size > 0:
+                #have to use Wei Liu's relation strings (so no ___ before and after the type label
+                if len(sample["context_provenance"]["chained"]) > 0  and sample["relation_type"]=="Implicit":
+                    print(f"-----------\n {json.dumps(sample, indent=3)} \n -----------------")
 
             #finalise result
             result.append(sample)
 
-    return result
+    return result, stats
 

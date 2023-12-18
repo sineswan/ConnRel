@@ -2,7 +2,9 @@ from data_wrapper.pdtb_data_wrapper import *
 
 class ContextManagerPDTB2:
 
-    def add_context(self, doc_id, annotations, raw_text, consider_all=False, emphasise_connectives=False, context_mode=0):
+    def add_context(self, doc_id, annotations, raw_text, consider_all=False, emphasise_connectives=False,
+                    context_mode=0,
+                    include_explicit_connective=False):
         """
         This method loops through all the annotations and collects context, noting that context can be carried across
         annotations.
@@ -15,15 +17,13 @@ class ContextManagerPDTB2:
         dependencies = {}
         dependency_offsets = {}
 
-        mode1_stats = {
+        model_stats = {
             "found": 0,
             "not_found": 0,
-            R_ENTREL: 0,
-            R_IMPLICIT: 0,
-            R_EXPLICIT: 0,
-            R_NOREL: 0,
-            R_ALTLEX: 0
         }
+
+        for label in annot_all:
+            model_stats[label] = 0
 
         for i, annotation in enumerate(annotations):
             annotation["context"] = None
@@ -67,7 +67,7 @@ class ContextManagerPDTB2:
 
                 if found_match:
                     # print(f"FOUND prior dependency: ARG1: {arg1}, found_match: {found_match}, ARG2: {arg2} ")
-                    mode1_stats["found"] += 1
+                    model_stats["found"] += 1
 
                     # We loop over all data points with this prior arg2 which might break linear order of text but this is rare.
                     dep_context = []
@@ -135,7 +135,12 @@ class ContextManagerPDTB2:
                                     # else:
                                     #     candidate_prior_arg = candidate_prior_arg + " #_ " + prior_connective + " _@ "
 
-                        mode1_stats[prior_discourse_type] += 1
+                        #If PDTB2, the relation tokens have pre/suf-fix == "____", but in PDTB3 it doesn't.
+                        if prior_discourse_type in model_stats.keys():
+                            model_stats[prior_discourse_type] += 1
+                        else:
+                            key = f"____{prior_discourse_type}____"
+                            model_stats[key] += 1
 
                         # find preceding (accumulated) dependencies
                         if prior_arg in dependencies.keys():
@@ -166,7 +171,7 @@ class ContextManagerPDTB2:
                     annotation["context"]["chained"] = []
                     annotation["context"]["chained_offsets"] = []
                     annotation["context"]["chained_source_ids"] = []
-                    mode1_stats["not_found"] += 1
+                    model_stats["not_found"] += 1
 
-        print(f"SUMMARY mode1_stats: {mode1_stats}")
-        return annotations
+        # print(f"SUMMARY model_stats: {model_stats}")
+        return annotations, model_stats
