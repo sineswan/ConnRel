@@ -123,7 +123,7 @@ class SpanUnentangler:
                             # the next added_span, in which case they need to be merged.
                             if overlap == 1: #so some extension needed (and span2 comes AFTER span1; Different from -1 case!!)
 
-                                print(f"OUTCOME: merging overlap 1: span_offset: {span_offset}, chain: {chain}, offsets: {chain_offsets}")
+                                print(f"OUTCOME: merging overlap 1: span_offset: {span_offset}, added_span: {added_span}, chain: {chain}, offsets: {chain_offsets}")
 
 
                                 kept_spans[added_span_start]["end"] = span_offset[1]  #the extension because overlap==1
