@@ -83,7 +83,7 @@ mode_use_joen_1baseline = 3
 
 def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pdtb2", mode=0, context_size=0,
                      jeon_segment_reader=None,
-                     FLAG_prepocessing_version=2
+                     FLAG_preprocessing_version=2
                     ):
     """
     This method intercepts the "cur_samples" data structure and adds extra context information to the samples.
@@ -212,8 +212,14 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         # print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
                         # print(f"\n {chained_context_offsets}")
 
+                        print(f"-------------------------------------------")
+                        print(f"chained_context: {chained_context}, chained_context_offsets: {chained_context_offsets}")
+
                         unentangler = SpanUnentangler()
                         kept_spans, boundary = unentangler.make_non_overlapping_context_chain(chained_context, chained_context_offsets)
+
+                        print(f"kept_spans: {kept_spans}, boundary: {boundary}")
+
 
                         processed_chained_context = []
                         for key in sorted(kept_spans.keys()):
@@ -240,10 +246,13 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         some_context = ". ".join(some_context_list)
                         new_arg1_string = some_context + " " + sample["arg1"]           #creating the new string depends on mode
 
-                        if FLAG_prepocessing_version==3:
+                        if FLAG_preprocessing_version==3:
                             context_and_args = [x for x in some_context_list]
                             context_and_args.append(sample["arg1"])
                             context_and_args_offsets = [boundary, annotations[i][R_ARG1]["arg_span_list"][0]]  #take 1st offset in arg1 span_list
+
+                            print(f"context_and_args: {context_and_args}, context_and_args_offsets: {context_and_args_offsets}")
+                            print(f"-------------------------------------------")
 
                             merged_context_arg1, merged_boundary = \
                                 unentangler.make_non_overlapping_context_chain(context_and_args, context_and_args_offsets)
