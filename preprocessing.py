@@ -313,7 +313,7 @@ def refine_raw_data_pdtb3(source_dir, gold_dir, data_list, output_dir, mode,
                                                                    dataset="pdtb3",
                                                                    mode=context_mode, context_size=context_size,
                                                                    jeon_segment_reader=jeon_segment_reader,
-                                                                   FLAG_prepocessing_version=3)
+                                                                   FLAG_preprocessing_version=3)
 
             #update stats
             if stats:

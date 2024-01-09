@@ -123,13 +123,20 @@ class SpanUnentangler:
                             # the next added_span, in which case they need to be merged.
                             if overlap == 1: #so some extension needed (and span2 comes AFTER span1; Different from -1 case!!)
 
-                                print(f"OUTCOME: merging overlap 1: span_offset: {span_offset}, added_span: {added_span}, chain: {chain}, offsets: {chain_offsets}")
+                                #20240109: so chain[span_id] comes AFTER kept_spans[added_span_start]["text"]
 
+                                span_before = kept_spans[added_span_start]["text"]
+                                span_after = chain[span_id]
+                                print(f"TRACE: {span_before} ++ {span_after}")
+                                print(f"TRACE: merging overlap 1: span_offset: {span_offset}, added_span: {added_span}")
+                                overlap_offset = added_span[1]-span_offset[0]
+                                print(f"TRACE: overlap_offset: {overlap_offset}")
+                                merged_text = span_before[:-overlap_offset]+span_after
 
                                 kept_spans[added_span_start]["end"] = span_offset[1]  #the extension because overlap==1
 
-                                #20231218: don't seem to run into this for PDTB2  ... but we do for PDTB3
-                                kept_spans[added_span_start]["text"] = "FIXME1"
+                                #20240109: don't seem to run into this for PDTB2 but occurs in PDTB3 (checked even for preprocessing version 3)
+                                kept_spans[added_span_start]["text"] = f""+merged_text
 
                                 #check that next added_span is still fine
                                 if len(sorted_span_start_keys) > sorted_span_start_keys_ptr + 1:  #check there is a next

@@ -168,13 +168,13 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
         context_manager = ContextManagerPDTB2()
         annotations, stats = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
                                                   consider_all=FLAG_consider_all,
-                                                  emphasise_connectives=True,
+                                                  emphasise_connectives=False,
                                                   context_mode=mode)
     elif mode == mode_use_joen or mode == mode_use_joen_1baseline:
         context_manager = ContextManagerJoen(jeon_segment_reader)
         annotations, _ = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
                                                   consider_all=FLAG_consider_all,
-                                                  emphasise_connectives=True,
+                                                  emphasise_connectives=False,
                                                   context_mode=mode)
 
     #STEP 5. integrate results with the original dicts.
@@ -225,6 +225,12 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         for key in sorted(kept_spans.keys()):
                             processed_chained_context.append(kept_spans[key]["text"])
 
+                        processed_chained_context_offsets = []  #has same length as processed_chained_context
+                        for key in sorted(kept_spans.keys()):
+                            processed_chained_context_offsets.append(
+                                (kept_spans[key]["start"], kept_spans[key]["end"])
+                            )
+
                         #clobber original chained_context
                         chained_context = processed_chained_context
 
@@ -233,6 +239,7 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             offset = len(chained_context)
 
                         some_context_list = chained_context[-offset:]  #context_size is number of context sentences to use
+                        some_context_list_offsets = processed_chained_context_offsets[-offset:]  #context_size is number of context sentences to use
 
                         #store offset dist
                         if not offset in context_len_dist.keys():
@@ -249,7 +256,8 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         if FLAG_preprocessing_version==3:
                             context_and_args = [x for x in some_context_list]
                             context_and_args.append(sample["arg1"])
-                            context_and_args_offsets = [boundary, annotations[i][R_ARG1]["arg_span_list"][0]]  #take 1st offset in arg1 span_list
+                            context_and_args_offsets = [x for x in some_context_list_offsets]
+                            context_and_args_offsets.append(annotations[i][R_ARG1]["arg_span_list"][0])  #take 1st offset in arg1 span_list
 
                             print(f"context_and_args: {context_and_args}, context_and_args_offsets: {context_and_args_offsets}")
                             print(f"-------------------------------------------")
