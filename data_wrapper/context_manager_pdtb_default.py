@@ -15,6 +15,7 @@ class ContextManagerPDTB2:
         arg2s = {}
 
         dependencies = {}
+        dependency_connectives = {}
         dependency_offsets = {}
 
         model_stats = {
@@ -71,6 +72,7 @@ class ContextManagerPDTB2:
 
                     # We loop over all data points with this prior arg2 which might break linear order of text but this is rare.
                     dep_context = []
+                    dep_context_connectives = []
                     dep_context_offsets = []
                     for dep_id in arg2s[found_match]:
 
@@ -82,6 +84,7 @@ class ContextManagerPDTB2:
                         prior_connective = prior_dep["conn"]
                         prior_discourse_type = prior_dep["type"]
                         candidate_prior_arg = prior_arg
+                        candidate_prior_arg_connective = None
 
                         # position tuple is in a list (usually singleton); take 1st
                         prior_arg_start = prior_dep[R_ARG1]["arg_span_list"][0][0]
@@ -97,22 +100,31 @@ class ContextManagerPDTB2:
                             if prior_discourse_type == R_IMPLICIT:
                                 # it's a nominal char position where the connective would be inserted.
                                 prior_connective_position = prior_dep["string_pos"]
-                                if emphasise_connectives:
+                                candidate_prior_arg_connective = {
+                                    "start":prior_connective_position,
+                                    "end":None,
+                                    "text":prior_connective,
+                                    "type":prior_discourse_type
+                                }
+
+                                if emphasise_connectives:               #this block is now defunct 20240110
                                     if prior_connective_position < prior_arg_start:
                                         candidate_prior_arg = " " + prior_connective + " " + candidate_prior_arg
                                     else:
                                         candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
-
-                                    # if prior_connective_position < prior_arg_start:
-                                    #     candidate_prior_arg = " # " + prior_connective + " @ " + candidate_prior_arg
-                                    # else:
-                                    #     candidate_prior_arg = candidate_prior_arg + " # " + prior_connective + " @ "
 
                             else:
                                 # could be a range
                                 prior_connective_position_tuple = prior_dep["main_span_list"]
                                 prior_connective_positions = prior_connective_position_tuple[0]
                                 prior_connective_start = prior_connective_positions[0]
+                                prior_connective_end = prior_connective_positions[1]
+                                candidate_prior_arg_connective = {
+                                    "start":prior_connective_start,
+                                    "end":prior_connective_end,
+                                    "text":prior_connective,
+                                    "type":prior_discourse_type
+                                }
 
                                 # prior_connective_positions are now set
 
@@ -122,7 +134,6 @@ class ContextManagerPDTB2:
 
                                 # always use prior_arg_end because if the connective comes after it is the start of a new sent
                                 candidate_prior_arg = raw_text[earliest_char_pos:prior_arg_end]
-                                # if prior_connective_position[1] > prior_arg_end:
 
                                 if emphasise_connectives:
                                     if prior_connective_start < prior_arg_start:
@@ -130,10 +141,6 @@ class ContextManagerPDTB2:
                                     else:
                                         candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
 
-                                    # if prior_connective_position < prior_arg_start:
-                                    #     candidate_prior_arg = " #_ " + prior_connective + " _@ " + candidate_prior_arg
-                                    # else:
-                                    #     candidate_prior_arg = candidate_prior_arg + " #_ " + prior_connective + " _@ "
 
                         #If PDTB2, the relation tokens have pre/suf-fix == "____", but in PDTB3 it doesn't.
                         if prior_discourse_type in model_stats.keys():
@@ -147,6 +154,8 @@ class ContextManagerPDTB2:
                             # need to iterate to *copy* content (i.e., duplicate) to new dep_context for THIS data point
                             for deps in dependencies[prior_arg]:
                                 dep_context.append(deps)
+                            for deps in dependency_connectives[prior_arg]:
+                                dep_context_connectives.append(deps)
                             for deps_start, deps_end in dependency_offsets[prior_arg]:
                                 dep_context_offsets.append((deps_start, deps_end))  # duplicate tuple
 
@@ -155,15 +164,19 @@ class ContextManagerPDTB2:
                                 (prior_discourse_type in annot_has_relationship):
                             # print(f"prior connective: {prior_connective}")
                             dep_context.append(candidate_prior_arg)
+                            # candidate_prior_arg_connective: position offsets and connective : e.g., ((x,y), Because )
+                            dep_context_connectives.append(candidate_prior_arg_connective)
                             dep_context_offsets.append((earliest_char_pos, latest_char_pos))
 
                     # print(f"len(chained_context): {len(dep_context)}: {dep_context}\n")
                     annotation["context"]["chained"] = dep_context
+                    annotation["context"]["chained_connectives"] = dep_context_connectives
                     annotation["context"]["chained_offsets"] = dep_context_offsets
                     annotation["context"]["chained_source_ids"] = arg2s[found_match]
 
                     # accumulate dependencies for this matched arg1
                     dependencies[arg1] = dep_context
+                    dependency_connectives[arg1] = dep_context_connectives
                     dependency_offsets[arg1] = dep_context_offsets
 
                 else:
