@@ -83,7 +83,8 @@ mode_use_joen_1baseline = 3
 
 def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pdtb2", mode=0, context_size=0,
                      jeon_segment_reader=None,
-                     FLAG_preprocessing_version=2
+                     FLAG_preprocessing_version=2,
+                     FLAG_emphasise_connectives=False
                     ):
     """
     This method intercepts the "cur_samples" data structure and adds extra context information to the samples.
@@ -168,18 +169,30 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
         context_manager = ContextManagerPDTB2()
         annotations, stats = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
                                                   consider_all=FLAG_consider_all,
-                                                  emphasise_connectives=False,
+                                                  emphasise_connectives=FLAG_emphasise_connectives,
                                                   context_mode=mode)
     elif mode == mode_use_joen or mode == mode_use_joen_1baseline:
         context_manager = ContextManagerJoen(jeon_segment_reader)
         annotations, _ = context_manager.add_context(doc_id=doc_id, annotations=annotations, raw_text=raw_contents,
                                                   consider_all=FLAG_consider_all,
-                                                  emphasise_connectives=False,
+                                                  emphasise_connectives=FLAG_emphasise_connectives,
                                                   context_mode=mode)
 
     #STEP 5. integrate results with the original dicts.
     result = []
     context_len_dist = {}
+
+    ex_connective_start_delimiter = ""
+    ex_connective_end_delimiter = ""
+    im_connective_start_delimiter = " "             #default: a space to separate inserted connective
+    im_connective_end_delimiter = " "               #default: a space to separate inserted connective
+
+    if FLAG_emphasise_connectives:
+        ex_connective_start_delimiter = " # "
+        ex_connective_end_delimiter = " @ "
+        im_connective_start_delimiter = " ## "
+        im_connective_end_delimiter = " @@ "
+
     for i,sample in enumerate(cur_samples):
 
         if is_same_datapoint(sample, annotations[i]):
@@ -212,13 +225,13 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         # print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
                         # print(f"\n {chained_context_offsets}")
 
-                        print(f"-------------------------------------------")
-                        print(f"chained_context: {chained_context}, chained_context_offsets: {chained_context_offsets}")
+                        # print(f"-------------------------------------------")
+                        # print(f"chained_context: {chained_context}, chained_context_offsets: {chained_context_offsets}")
 
                         unentangler = SpanUnentangler()
                         kept_spans, boundary = unentangler.make_non_overlapping_context_chain(chained_context, chained_context_offsets)
 
-                        print(f"kept_spans: {kept_spans}, boundary: {boundary}")
+                        # print(f"kept_spans: {kept_spans}, boundary: {boundary}")
 
 
                         processed_chained_context = []
@@ -240,6 +253,7 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                         some_context_list = chained_context[-offset:]  #context_size is number of context sentences to use
                         some_context_list_offsets = processed_chained_context_offsets[-offset:]  #context_size is number of context sentences to use
+                        some_context_connective_list = annotations[i]["context"]["chained_connectives"][-offset:]
 
                         #store offset dist
                         if not offset in context_len_dist.keys():
@@ -259,17 +273,73 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             context_and_args_offsets = [x for x in some_context_list_offsets]
                             context_and_args_offsets.append(annotations[i][R_ARG1]["arg_span_list"][0])  #take 1st offset in arg1 span_list
 
-                            print(f"context_and_args: {context_and_args}, context_and_args_offsets: {context_and_args_offsets}")
-                            print(f"-------------------------------------------")
-
                             merged_context_arg1, merged_boundary = \
                                 unentangler.make_non_overlapping_context_chain(context_and_args, context_and_args_offsets)
 
-                            merged_context_arg1_texts = []
-                            for key in sorted(merged_context_arg1.keys()):
-                                merged_context_arg1_texts.append(merged_context_arg1[key]["text"])
+                            # print(
+                            #     f"context_and_args: {context_and_args}, context_and_args_offsets: {context_and_args_offsets}")
+                            # print(f"merged_context_arg1: {merged_context_arg1}, boundary: {merged_boundary}")
 
-                            new_arg1_string = " ".join(merged_context_arg1_texts)
+                            merged_context_arg1_texts = []
+                            last_seen_offset = None
+                            for key in sorted(merged_context_arg1.keys()):
+                                # print(f"last_seen_offset: {last_seen_offset}")
+                                component_start = merged_context_arg1[key]["start"]
+                                component_end = merged_context_arg1[key]["end"]
+                                component_offsets = (component_start, component_end)
+                                component_text = merged_context_arg1[key]["text"]
+
+                                padding = ""
+                                if last_seen_offset:
+                                #     diff = component_start - last_seen_offset
+                                #
+                                #     print(f"diff: {diff}, component_start: {component_start}")
+                                #
+                                #     padding = "".ljust(diff, " ")     #need to -1 as slices are right-exclusive
+
+                                    padding = raw_contents[last_seen_offset+1:component_start]
+                                    # print(f"padding: {last_seen_offset+1}-{component_start}//{padding}//")
+
+                                last_seen_offset = component_end
+                                merged_context_arg1_texts.append(f"{padding}{component_text}")
+
+                            # print(f"merged_context_arg1_texts: {merged_context_arg1_texts}")
+
+                            merged_arg1_string = "".join(merged_context_arg1_texts)
+
+                            # print(f"merged_arg1_string: {merged_arg1_string}")
+
+                            # now add in the connectives
+                            new_merged_string = ""
+                            last_connective_offset = 0
+                            for connective_edit in some_context_connective_list:
+
+                                connective_start_pos = connective_edit["start"] - merged_boundary[0]
+                                new_merged_string += merged_arg1_string[last_connective_offset:connective_start_pos]
+                                last_connective_offset = connective_start_pos
+
+                                # print(f"connective: {connective_edit}")
+
+                                if connective_edit["type"]  == "____Explicit____":
+
+                                    #by definition (of explicit) the connective span has to overlap with this
+                                    connective_end_pos = connective_edit["end"] - merged_boundary[0]
+                                    connective = merged_arg1_string[connective_start_pos:connective_end_pos]
+
+                                    new_merged_string += f"{ex_connective_start_delimiter}{connective}{ex_connective_end_delimiter}"
+                                    last_connective_offset = connective_end_pos
+
+
+                                elif connective_edit["type"] == "____Implicit____":
+                                    connective = connective_edit["text"]
+                                    new_merged_string += f"{im_connective_start_delimiter}{connective}{im_connective_end_delimiter}"
+
+                            new_merged_string += merged_arg1_string[last_connective_offset:]  #consume remainder of the string
+                            new_arg1_string = new_merged_string
+
+
+                            # print(f"new arg1: {new_arg1_string}")
+                            # print(f"-------------------------------------------")
 
                 # print(f"SUMMARY: Context len dist: {context_len_dist}")  # print to stdout distribution of context offset lengths for this preprocessing job
 

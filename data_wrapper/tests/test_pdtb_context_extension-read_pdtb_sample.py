@@ -27,6 +27,7 @@ if __name__ == "__main__":
                                                                  dataset="pdtb3",
                                                                  mode=context_mode, context_size=context_size,
                                                                  jeon_segment_reader=None,
-                                                                 FLAG_preprocessing_version=3)
+                                                                 FLAG_preprocessing_version=3,
+                                                                 FLAG_emphasise_connectives=True)
 
     # print(f"{json.dumps(cur_samples, indent=3)}")

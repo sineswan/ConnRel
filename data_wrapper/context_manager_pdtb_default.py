@@ -1,3 +1,4 @@
+import json
 from data_wrapper.pdtb_data_wrapper import *
 
 class ContextManagerPDTB2:
@@ -78,8 +79,6 @@ class ContextManagerPDTB2:
 
                         prior_dep = annotations[dep_id]
 
-                        # print(f"prior_dep: \n {json.dumps(prior_dep, indent=3)}")
-
                         prior_arg = prior_dep[R_ARG1]["arg_text"]
                         prior_connective = prior_dep["conn"]
                         prior_discourse_type = prior_dep["type"]
@@ -93,8 +92,10 @@ class ContextManagerPDTB2:
                         earliest_char_pos = prior_arg_start
                         latest_char_pos = prior_arg_end
 
-                        if prior_discourse_type in annot_has_relationship:
+                        if prior_discourse_type in annot_relation_strings: #annot_has_relationship:
                             # find the prior_arg and conn offsets and find the outer set (maximal string)
+
+                            # print(f"prior_dep[{arg1}::{found_match}]: \n {json.dumps(prior_dep, indent=3)}")
 
                             prior_connective_positions = None
                             if prior_discourse_type == R_IMPLICIT:
@@ -107,11 +108,11 @@ class ContextManagerPDTB2:
                                     "type":prior_discourse_type
                                 }
 
-                                if emphasise_connectives:               #this block is now defunct 20240110
-                                    if prior_connective_position < prior_arg_start:
-                                        candidate_prior_arg = " " + prior_connective + " " + candidate_prior_arg
-                                    else:
-                                        candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
+                                # if emphasise_connectives:               #this block is now defunct 20240110
+                                #     if prior_connective_position < prior_arg_start:
+                                #         candidate_prior_arg = " " + prior_connective + " " + candidate_prior_arg
+                                #     else:
+                                #         candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
 
                             else:
                                 # could be a range
@@ -128,40 +129,41 @@ class ContextManagerPDTB2:
 
                                 # prior_connective_positions are now set
 
-                                # Connective could come before arg1: e.g., Although ARG1 ... ARG2
-                                earliest_char_pos = (prior_arg_start) if \
-                                    (prior_arg_start < prior_connective_start) else prior_connective_start
+                                # # Connective could come before arg1: e.g., Although ARG1 ... ARG2
+                                # earliest_char_pos = (prior_arg_start) if \
+                                #     (prior_arg_start < prior_connective_start) else prior_connective_start
+                                #
+                                # # always use prior_arg_end because if the connective comes after it is the start of a new sent
+                                # candidate_prior_arg = raw_text[earliest_char_pos:prior_arg_end]
+                                #
+                                # if emphasise_connectives:
+                                #     if prior_connective_start < prior_arg_start:
+                                #         candidate_prior_arg = " " + prior_connective + " " + candidate_prior_arg
+                                #     else:
+                                #         candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
 
-                                # always use prior_arg_end because if the connective comes after it is the start of a new sent
-                                candidate_prior_arg = raw_text[earliest_char_pos:prior_arg_end]
 
-                                if emphasise_connectives:
-                                    if prior_connective_start < prior_arg_start:
-                                        candidate_prior_arg = " " + prior_connective + " " + candidate_prior_arg
-                                    else:
-                                        candidate_prior_arg = candidate_prior_arg + " " + prior_connective + " "
+                            #If PDTB2, the relation tokens have pre/suf-fix == "____", but in PDTB3 it doesn't.
+                            if prior_discourse_type in model_stats.keys():
+                                model_stats[prior_discourse_type] += 1
+                            else:
+                                key = f"____{prior_discourse_type}____"
+                                model_stats[key] += 1
 
-
-                        #If PDTB2, the relation tokens have pre/suf-fix == "____", but in PDTB3 it doesn't.
-                        if prior_discourse_type in model_stats.keys():
-                            model_stats[prior_discourse_type] += 1
-                        else:
-                            key = f"____{prior_discourse_type}____"
-                            model_stats[key] += 1
-
-                        # find preceding (accumulated) dependencies
-                        if prior_arg in dependencies.keys():
-                            # need to iterate to *copy* content (i.e., duplicate) to new dep_context for THIS data point
-                            for deps in dependencies[prior_arg]:
-                                dep_context.append(deps)
-                            for deps in dependency_connectives[prior_arg]:
-                                dep_context_connectives.append(deps)
-                            for deps_start, deps_end in dependency_offsets[prior_arg]:
-                                dep_context_offsets.append((deps_start, deps_end))  # duplicate tuple
+                            # find preceding (accumulated) dependencies
+                            if prior_arg in dependencies.keys():
+                                # need to iterate to *copy* content (i.e., duplicate) to new dep_context for THIS data point
+                                for deps in dependencies[prior_arg]:
+                                    dep_context.append(deps)
+                                for connective in dependency_connectives[prior_arg]:
+                                    dep_context_connectives.append(connective)
+                                for deps_start, deps_end in dependency_offsets[prior_arg]:
+                                    dep_context_offsets.append((deps_start, deps_end))  # duplicate tuple
 
                         # Only use (explicit or implicitly marked) discourse relationships
                         if (consider_all and prior_discourse_type in annot_exists) or \
-                                (prior_discourse_type in annot_has_relationship):
+                                (prior_discourse_type in annot_relation_strings):
+                                # (prior_discourse_type in annot_has_relationship):
                             # print(f"prior connective: {prior_connective}")
                             dep_context.append(candidate_prior_arg)
                             # candidate_prior_arg_connective: position offsets and connective : e.g., ((x,y), Because )
