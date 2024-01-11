@@ -1,4 +1,17 @@
 import regex as re
+import json, os
+import logging
+
+
+# set logger, print to console and write to file
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+BASIC_FORMAT = "%(asctime)s:%(levelname)s: %(message)s"
+DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+formatter = logging.Formatter(BASIC_FORMAT, DATE_FORMAT)
+chlr = logging.StreamHandler()
+chlr.setFormatter(formatter)
+logger.addHandler(chlr)
 
 #referencing the fileformat.pdf documentation for PDTB2 outlining BDF rules for the annotation
 R_ARG1 = "____Arg1____"
@@ -317,3 +330,112 @@ def read_raw(filename):
         text = file.read()
     return text
 
+#--------------------------------------------------------------------------------------------------------------------
+# For reading raw and label files together
+#--------------------------------------------------------------------------------------------------------------------
+def get_pdtb_dirs(dir):
+    return {
+        "labels": os.path.join(dir,"pdtb"),
+        "raw":os.path.join(dir,"raw/wsj")
+    }
+
+def read_pdtb_file_add_metadata(filename, section, filestub, datafile=None, dataset="pdtb2"):
+    """Designed to read pdtb2 annotation file (original downloaded from LDC)."""
+
+    samples = None
+    if dataset=="pdtb2":
+        samples = pdtb2_file_reader(filename)   #returns a list of samples
+    else:
+        samples = pdtb3_file_reader(data_file=datafile, label_file=filename)
+
+    #annotate samples with ID and source location
+    for i,sample in enumerate(samples):
+        samples[i]['id'] = f"{section}.{filestub}.{i:03d}"
+        samples[i]['section'] = section
+        samples[i]['filestub'] = filestub
+    return samples
+
+def add_raw_text_context(annotations, raw_text):
+
+    for annotation in annotations:
+        annotation["context"] = None
+
+        if raw_text:   #so assuming there's original content to get context
+
+            # Find the earliest point to trackback to find context
+            arg1_start = annotation[R_ARG1]["arg_span_list"][0][0] #1st element, 1st offset
+            arg2_start = annotation[R_ARG2]["arg_span_list"][0][0]  # 1st element, 1st offset
+
+            # print(f"Arg start chars: {arg1_start} {arg2_start}")
+            arg_start_min = min(arg1_start, arg2_start)
+            # print(f"min: {arg_start_min}")
+            context = raw_text[:arg_start_min]
+
+            # print(f"Arg start chars: {arg1_start} {arg2_start}: {context}")
+            annotation["context"] = {"raw":context}
+
+    return annotations
+
+
+def read_pdtb_raw_and_labels(raw_data_dir, file_extension=".pdtb", dataset="pdtb2"):
+    """
+    :param raw_data_dir: PDTB data set (as downloaded from Linguistic Data Consortium)
+    :return: a list of data points sorted by the alphabetical sort order of section labels and data point IDs in PDTB.
+    """
+    print(f"Reading from raw data: {raw_data_dir}")
+
+    data_dirs = get_pdtb_dirs(raw_data_dir)
+    logger.info(f"data: {data_dirs}")
+
+    # assign directory
+    raw_dir = data_dirs["raw"]
+    pdtb2_dir = data_dirs["labels"]
+
+    # iterate over raw PDTB sections
+
+    sections = []
+    raw_filenames = []
+    processed_pdtb_filenames = []
+    problem_filenames = []
+    data = []
+    raw_texts = []
+    for pdtb_section in sorted(os.listdir(raw_dir)):
+        sections.append(pdtb_section)
+        raw_section = os.path.join(raw_dir, pdtb_section)
+        label_section = os.path.join(pdtb2_dir, pdtb_section)
+
+        for raw_filename in sorted(os.listdir(raw_section)):
+            raw_filenames.append(raw_filename)
+            r_f = os.path.join(raw_section, raw_filename)   #RAW data file is the filestub: e.g.," wsj_0001"
+            l_f = os.path.join(label_section, raw_filename+file_extension)  #LABEL filename: e.g., "wsj_0001.pdtb"
+
+            # checking if it is a file
+            raw_contents = None
+            if os.path.isfile(r_f):
+                raw_contents = read_raw(r_f)
+            else:
+                problem_filenames.append(r_f)
+
+            if os.path.isfile(l_f):
+                processed_pdtb_filenames.append(l_f)
+                raw_texts.append(raw_contents)
+
+                # print(l_f)
+                annotations = None
+                annotations = read_pdtb_file_add_metadata(l_f, section=pdtb_section, filestub=raw_filename,
+                                                          datafile=r_f, dataset=dataset)
+                annotations = add_raw_text_context(annotations, raw_contents)
+                # for annotation in annotations:
+                #     print(f"annotation: {annotation}")
+
+                data.extend(annotations)
+            else:
+                problem_filenames.append(l_f)
+
+    # logger.info(f"{len(sections)} sections: {sorted(sections)}")
+    logger.info(f"{len(problem_filenames)} problems: {sorted(problem_filenames)}")
+
+    #calculate distribution of data lengths as BPE tokens
+    logger.info(f"Sanity check: files:raw == {len(processed_pdtb_filenames)}:{len(raw_texts)}")
+
+    return data, raw_texts, processed_pdtb_filenames

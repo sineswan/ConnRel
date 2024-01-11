@@ -313,7 +313,8 @@ def refine_raw_data_pdtb3(source_dir, gold_dir, data_list, output_dir, mode,
                                                                    dataset="pdtb3",
                                                                    mode=context_mode, context_size=context_size,
                                                                    jeon_segment_reader=jeon_segment_reader,
-                                                                   FLAG_preprocessing_version=3)
+                                                                   FLAG_preprocessing_version=3,
+                                                                         FLAG_emphasise_connectives=False)
 
             #update stats
             if stats:
@@ -496,11 +497,17 @@ if __name__ == "__main__":
         os.makedirs(output_dir, exist_ok=True)
         if args.dataset == "pdtb2":
             mode = "train"
-            refine_raw_data_pdtb2(source_dir, train_sections[idx], output_dir, mode)
+            refine_raw_data_pdtb2(source_dir, train_sections[idx], output_dir, mode,
+                              raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
             mode = "dev"
-            refine_raw_data_pdtb2(source_dir, dev_sections[idx], output_dir, mode)
+            refine_raw_data_pdtb2(source_dir, dev_sections[idx], output_dir, mode,
+                              raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
             mode = "test"
-            refine_raw_data_pdtb2(source_dir, test_sections[idx], output_dir, mode)
+            refine_raw_data_pdtb2(source_dir, test_sections[idx], output_dir, mode,
+                              raw_text_dir=pdtb2_raw_text_dir, context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
             generate_label_file(output_dir)
 
 
@@ -516,17 +523,17 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
     if args.dataset == "pdtb3":
         mode = "train"
-        # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-        #                       context_mode=context_mode, context_size=context_size,
-        #                       jeon_segment_reader=jeon_segment_reader
-        #                       )
+        refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                              context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader
+                              )
 
         data_list = ["00", "01"]
         mode = "dev"
-        # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
-        #                       context_mode=context_mode, context_size=context_size,
-        #                       jeon_segment_reader=jeon_segment_reader
-        #                       )
+        refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=data_list, output_dir=output_dir, mode=mode,
+                              context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader
+                              )
 
         data_list = ["21", "22"]
         mode = "test"
@@ -558,14 +565,20 @@ if __name__ == "__main__":
         gold_dir = "data/dataset/pdtb3/raw/gold"
         output_dir = "data/dataset/pdtb3/xval/fold_{}".format(idx + 1)
         os.makedirs(output_dir, exist_ok=True)
-        # if args.dataset == "pdtb3":
-        #     mode = "train"
-        #     # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=train_sections[idx], output_dir=output_dir, mode=mode)
-        #     mode = "dev"
-        #     # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=dev_sections[idx], output_dir=output_dir, mode=mode)
-        #     mode = "test"
-        #     # refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=test_sections[idx], output_dir=output_dir, mode=mode)
-        #     # generate_label_file(output_dir)
+        if args.dataset == "pdtb3":
+            mode = "train"
+            refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=train_sections[idx], output_dir=output_dir, mode=mode,
+                              context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
+            mode = "dev"
+            refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=dev_sections[idx], output_dir=output_dir, mode=mode,
+                              context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
+            mode = "test"
+            refine_raw_data_pdtb3(source_dir=source_dir, gold_dir=gold_dir, data_list=test_sections[idx], output_dir=output_dir, mode=mode,
+                              context_mode=context_mode, context_size=context_size,
+                              jeon_segment_reader=jeon_segment_reader)
+            generate_label_file(output_dir)
 
 
     #### PCC

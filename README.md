@@ -1,7 +1,6 @@
-# Annotation-Inspired Implicit Discourse Relation Classification with Auxiliary Discourse Connective Generation
-Code for the ACL 2023 paper "[Annotation-Inspired Implicit Discourse Relation Classification with Auxiliary Discourse Connective Generation](https://aclanthology.org/2023.acl-long.874.pdf)"
+# Discourse connective generation and relation classification
 
-If any questions, please contact the email: willie1206@163.com
+This code base is based on https://github.com/liuwei1206/ConnRel 
 
 ## 1. Requirement
 Our working environment is Python 3.8. Before you run the code, please make sure you have installed all the required packages. You can achieve it by simply execute the shell as `sh requirements.sh`
@@ -40,18 +39,4 @@ python preprocessing.py --pdtb2_raw_text_dir ../../../data/pdtb_v2_LDC2008T05/pd
 **For PCC**, you need to change the dataset into "pcc" and modify the `sample_k` to 10 and `conn_threshold` to 5.
 
 ## 4. Citation
-You can cite our paper through:
-```
-@inproceedings{liu-strube-2023-annotation,
-    title = "Annotation-Inspired Implicit Discourse Relation Classification with Auxiliary Discourse Connective Generation",
-    author = "Liu, Wei  and
-      Strube, Michael",
-    booktitle = "Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
-    month = jul,
-    year = "2023",
-    address = "Toronto, Canada",
-    publisher = "Association for Computational Linguistics",
-    url = "https://aclanthology.org/2023.acl-long.874",
-    pages = "15696--15712",
-}
-```
+...

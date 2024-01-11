@@ -96,6 +96,7 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
     0: use the raw context where offsets use to find all preceding text leading up to ARG1
     1: use annotations (dependent on context size)
     2: use automatic segmentation from Sungho Joen (dependent on context size)
+    3: use Stanford segmentation to pick last sentence
 
     context_size: 1-99: use the *last* (most recent) n (n=mode#) immediate context, where a relationship was annotated.
 
