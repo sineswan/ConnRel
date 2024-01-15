@@ -28,6 +28,6 @@ if __name__ == "__main__":
                                                                  mode=context_mode, context_size=context_size,
                                                                  jeon_segment_reader=None,
                                                                  FLAG_preprocessing_version=3,
-                                                                 FLAG_emphasise_connectives=True)
+                                                                 FLAG_emphasise_connectives=False)
 
     # print(f"{json.dumps(cur_samples, indent=3)}")

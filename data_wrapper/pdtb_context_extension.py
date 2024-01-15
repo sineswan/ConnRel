@@ -1,4 +1,5 @@
 import os, json
+import re
 
 from data_wrapper.context_manager_pdtb_default import ContextManagerPDTB2
 from data_wrapper.span_unentangler import SpanUnentangler
@@ -194,10 +195,10 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
         im_connective_start_delimiter = " ## "
         im_connective_end_delimiter = " @@ "
 
+
     for i,sample in enumerate(cur_samples):
 
         if is_same_datapoint(sample, annotations[i]):
-
             #Add extra provenance data
             # sample['id'] = f"{section_string}.{file_stub}.{i:03d}"
             sample['id'] = f"{section_string}.{doc_id}.{i:03d}"
@@ -217,22 +218,30 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
             #MODE 1: Context== most recent n (n=mode#) relationship where this sent/arg was an ARG2
             elif mode==1:
+
+                FLAG_debug_preprocessing = False
+
                 if context_size > 0: #Need to the prune context as needed
                     #1 < context_size < 99: means amount of gold relationships to use
                     chained_context = annotations[i]["context"]["chained"]
                     chained_context_offsets = annotations[i]["context"]["chained_offsets"]
-                    # print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
-                    if len(chained_context) > 0:
-                        # print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
-                        # print(f"\n {chained_context_offsets}")
 
-                        # print(f"-------------------------------------------")
-                        # print(f"chained_context: {chained_context}, chained_context_offsets: {chained_context_offsets}")
+                    if FLAG_debug_preprocessing:
+                        print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
+
+                    if len(chained_context) > 0:
+                        if FLAG_debug_preprocessing:
+                            print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
+                            print(f"\n {chained_context_offsets}")
+
+                            print(f"-------------------------------------------")
+                            print(f"chained_context: {chained_context}, chained_context_offsets: {chained_context_offsets}")
 
                         unentangler = SpanUnentangler()
                         kept_spans, boundary = unentangler.make_non_overlapping_context_chain(chained_context, chained_context_offsets)
 
-                        # print(f"kept_spans: {kept_spans}, boundary: {boundary}")
+                        if FLAG_debug_preprocessing:
+                            print(f"kept_spans: {kept_spans}, boundary: {boundary}")
 
 
                         processed_chained_context = []
@@ -269,18 +278,37 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                         new_arg1_string = some_context + " " + sample["arg1"]           #creating the new string depends on mode
 
                         if FLAG_preprocessing_version==3:
+                            """
+                            This version will try to remove duplicate from the context and the original arg1.  This issue 
+                            is more pronounced in PDTB3.  
+                            
+                            As a result, there are some options.  
+                            (1) For missing text, we can take text from the original data, or leave blank (rely on annotation)
+                            (2) Here, we can insert, connectives (since this version keeps track of span edits for connectives.
+                            Default: leave blank, don't add connectives. """
+
+                            FLAG_replace_missing_text = False
+                            FLAG_inject_implicit_connectives = False
+
                             context_and_args = [x for x in some_context_list]
                             context_and_args.append(sample["arg1"])
                             context_and_args_offsets = [x for x in some_context_list_offsets]
                             context_and_args_offsets.append(annotations[i][R_ARG1]["arg_span_list"][0])  #take 1st offset in arg1 span_list
 
+                            #--------------------------------
+                            # Preprocessing v3: Merge arg1 and context
+                            #--------------------------------
+                            
+                            #check for overlaps
                             merged_context_arg1, merged_boundary = \
                                 unentangler.make_non_overlapping_context_chain(context_and_args, context_and_args_offsets)
 
-                            # print(
-                            #     f"context_and_args: {context_and_args}, context_and_args_offsets: {context_and_args_offsets}")
-                            # print(f"merged_context_arg1: {merged_context_arg1}, boundary: {merged_boundary}")
+                            if FLAG_debug_preprocessing:
+                                print(
+                                    f"context_and_args: {context_and_args}, context_and_args_offsets: {context_and_args_offsets}")
+                                print(f"merged_context_arg1: {merged_context_arg1}, boundary: {merged_boundary}")
 
+                            #compile final version, checking for missing text (replace text is optional)
                             merged_context_arg1_texts = []
                             last_seen_offset = None
                             for key in sorted(merged_context_arg1.keys()):
@@ -292,25 +320,34 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                                 padding = ""
                                 if last_seen_offset:
-                                #     diff = component_start - last_seen_offset
-                                #
-                                #     print(f"diff: {diff}, component_start: {component_start}")
-                                #
-                                #     padding = "".ljust(diff, " ")     #need to -1 as slices are right-exclusive
+                                    if FLAG_replace_missing_text:
+                                        padding = raw_contents[last_seen_offset + 1:component_start]
+                                    else:
+                                        diff = component_start - last_seen_offset
+                                        #     print(f"diff: {diff}, component_start: {component_start}")
 
-                                    padding = raw_contents[last_seen_offset+1:component_start]
-                                    # print(f"padding: {last_seen_offset+1}-{component_start}//{padding}//")
+                                        padding = "".ljust(diff, " ")     #need to -1 as slices are right-exclusive
+
+                                    if FLAG_debug_preprocessing:
+                                        print(f"padding: {last_seen_offset+1}-{component_start}//{padding}//")
 
                                 last_seen_offset = component_end
                                 merged_context_arg1_texts.append(f"{padding}{component_text}")
 
-                            # print(f"merged_context_arg1_texts: {merged_context_arg1_texts}")
+
+                            if FLAG_debug_preprocessing:
+                                print(f"merged_context_arg1_texts: {merged_context_arg1_texts}")
 
                             merged_arg1_string = "".join(merged_context_arg1_texts)
 
-                            # print(f"merged_arg1_string: {merged_arg1_string}")
 
-                            # now add in the connectives
+                            if FLAG_debug_preprocessing:
+                                print(f"merged_arg1_string: {merged_arg1_string}")
+
+                            #--------------------------------
+                            # Preprocessing v3: 
+                            #   now add in the connectives (optional)
+                            #--------------------------------
                             new_merged_string = ""
                             last_connective_offset = 0
                             for connective_edit in some_context_connective_list:
@@ -326,18 +363,28 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                                     #by definition (of explicit) the connective span has to overlap with this
                                     connective_end_pos = connective_edit["end"] - merged_boundary[0]
                                     connective = merged_arg1_string[connective_start_pos:connective_end_pos]
+                                    if connective.strip() == "":
+                                        print(f"Empty explicit connective (because of missing text), using annotation")
+                                        connective = " "+connective_edit["text"]+" "
 
                                     new_merged_string += f"{ex_connective_start_delimiter}{connective}{ex_connective_end_delimiter}"
                                     last_connective_offset = connective_end_pos
 
-
                                 elif connective_edit["type"] == "____Implicit____":
-                                    connective = connective_edit["text"]
-                                    new_merged_string += f"{im_connective_start_delimiter}{connective}{im_connective_end_delimiter}"
+                                    if FLAG_inject_implicit_connectives:
+                                        connective = connective_edit["text"]
+                                        new_merged_string += f"{im_connective_start_delimiter}{connective}{im_connective_end_delimiter}"
 
                             new_merged_string += merged_arg1_string[last_connective_offset:]  #consume remainder of the string
-                            new_arg1_string = new_merged_string
 
+                            #safety net (a hack) check that the original arg1 is still in the final result
+                            if new_merged_string.find(sample['arg1']) == -1:
+                                new_merged_string += " "+sample['arg1']
+
+                                print(f"WARNING PDTB3_context_extension: did not add arg1 {sample['id']}")
+
+                            #check for multiple spaces
+                            new_arg1_string = re.sub(' +', ' ', new_merged_string)
 
                             # print(f"new arg1: {new_arg1_string}")
                             # print(f"-------------------------------------------")
