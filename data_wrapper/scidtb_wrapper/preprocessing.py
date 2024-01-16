@@ -1,5 +1,6 @@
 import argparse, json, os, csv
 import codecs
+import scidtb_to_connrel_converter
 
 def read_scidtb_trees(filename):
     file_contents = open(filename, "r", encoding="utf-8-sig").read()
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--disrpt_input", required=True)
     parser.add_argument("--scidtb_input", required=True)
-    # parser.add_argument("--output", required=True)
+    parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
 
@@ -70,8 +71,8 @@ if __name__ == "__main__":
 
             # print(f"tree: {json.dumps(tree_info, indent=3)}")
 
-    print(f"Data in SciDTB: {len(trees.keys())}")
 
+    #ANALYSE relation-first_word mappings
     relation_connective_mapping = {}
     for data_split_key in ["dev", "train"]:
         for filename in trees[data_split_key].keys():
@@ -80,6 +81,8 @@ if __name__ == "__main__":
             for edge in edges:
                 if edge["text"] == "ROOT":
                     continue    #skip the root edge
+                elif not int(edge["parent"]) == (int(edge["id"]) - 1):  #only analyse cases where parent directly precedes
+                    continue
                 else:
                     relation = edge["relation"]
                     if not relation in relation_connective_mapping.keys():
@@ -90,24 +93,48 @@ if __name__ == "__main__":
                     else:
                         relation_connective_mapping[relation][first_word] += 1
 
+    final_relation_connective_mapping = {}
     for relation in relation_connective_mapping.keys():
         hist = relation_connective_mapping[relation]
         sorted_hist = {k: v for k, v in sorted(hist.items(), key=lambda item: item[1], reverse=True)}
 
+        filtered_connectives = {}
         for key  in sorted_hist.keys():
             filter_string = "---"
             if int(sorted_hist[key]) > 1 :
                 filter_string = ""
-            print(f"{relation}: {filter_string} word {key}, freq: {sorted_hist[key]}")
+                filtered_connectives[key] = sorted_hist[key]
+            print(f"{relation}: {filter_string} word= {key}, freq= {sorted_hist[key]}")
+        final_relation_connective_mapping[relation] = filtered_connectives
 
+    print(f"{json.dumps(final_relation_connective_mapping, indent=3)}")
 
 
     #--------------------------------------------
     #read in disrpt scidtb relations
     #--------------------------------------------
     relations = {}
+    label_set = []
     for data_split_key in disrpt_dir_structure["rels"].keys():
         pathway = disrpt_dir_structure["rels"][data_split_key]
         full_pathway = os.path.join(args.disrpt_input, pathway)
         rels = read_disrpt_scidtb_rels(full_pathway)
         relations[data_split_key] = rels
+
+    for data_split_key in relations.keys():
+        print(f"data_split: {data_split_key}")
+        output_data = []
+        for relation in relations[data_split_key]:
+            corrected = scidtb_to_connrel_converter.convert(relation)
+            output_data.append(corrected)
+
+            if not corrected["relation_class"] in label_set:
+                label_set.append(corrected["relation_class"])
+
+        with open(os.path.join(args.output, data_split_key+".json"), "w") as output_file:
+            for datum in output_data:
+                output_file.write(json.dumps(datum)+"\n")
+
+    with open(os.path.join(args.output, "labels_level1.txt"), "w") as output_file:
+        for label in label_set:
+            output_file.write(label+"\n")

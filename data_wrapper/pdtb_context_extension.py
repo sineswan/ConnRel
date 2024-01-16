@@ -288,7 +288,7 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             Default: leave blank, don't add connectives. """
 
                             FLAG_replace_missing_text = False
-                            FLAG_inject_implicit_connectives = False
+                            FLAG_inject_implicit_connectives = True
 
                             context_and_args = [x for x in some_context_list]
                             context_and_args.append(sample["arg1"])
@@ -385,6 +385,9 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                             #check for multiple spaces
                             new_arg1_string = re.sub(' +', ' ', new_merged_string)
+
+                            #add delimiter before arg1
+                            new_arg1_string = new_arg1_string.replace(sample['arg1'], ' ... '+sample['arg1'])
 
                             # print(f"new arg1: {new_arg1_string}")
                             # print(f"-------------------------------------------")
