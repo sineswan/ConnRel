@@ -387,7 +387,8 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             new_arg1_string = re.sub(' +', ' ', new_merged_string)
 
                             #add delimiter before arg1
-                            new_arg1_string = new_arg1_string.replace(sample['arg1'], ' ... '+sample['arg1'])
+                            # new_arg1_string = new_arg1_string.replace(sample['arg1'], ' ... '+sample['arg1'])
+                            new_arg1_string = ' ... ' + sample['arg1']
 
                             # print(f"new arg1: {new_arg1_string}")
                             # print(f"-------------------------------------------")
