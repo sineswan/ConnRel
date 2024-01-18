@@ -215,6 +215,8 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                 some_context = annotations[i]["context"]["raw"]
                 new_arg1_string = some_context + " " + sample["arg1"]           #creating the new string depends on mode
 
+                # DEBUGGING ONLY  -- check if original arg1 gives intended results, with (optional) gold answer
+                new_arg1_string = f"[SEP]{sample['relation_class']}[SEP]" + ' ... ' + sample['arg1']
 
             #MODE 1: Context== most recent n (n=mode#) relationship where this sent/arg was an ARG2
             elif mode==1:
@@ -389,8 +391,6 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             #add delimiter before arg1
                             new_arg1_string = new_arg1_string.replace(sample['arg1'], ' ... '+sample['arg1'])
 
-                        #DEBUGGING ONLY  -- check if original arg1 gives intended results, with (optional) gold answer
-                        new_arg1_string = f"[SEP]{sample['relation_class']}[SEP]"+' ... ' + sample['arg1']
 
 
                             # print(f"new arg1: {new_arg1_string}")
