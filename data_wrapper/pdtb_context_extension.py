@@ -215,8 +215,6 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                 some_context = annotations[i]["context"]["raw"]
                 new_arg1_string = some_context + " " + sample["arg1"]           #creating the new string depends on mode
 
-                # DEBUGGING ONLY  -- check if original arg1 gives intended results, with (optional) gold answer
-                new_arg1_string = f"[SEP]{sample['relation_class']}[SEP]" + ' ... ' + sample['arg1']
 
             #MODE 1: Context== most recent n (n=mode#) relationship where this sent/arg was an ARG2
             elif mode==1:
@@ -397,6 +395,9 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             # print(f"-------------------------------------------")
 
                 # print(f"SUMMARY: Context len dist: {context_len_dist}")  # print to stdout distribution of context offset lengths for this preprocessing job
+
+                # DEBUGGING ONLY  -- check if original arg1 gives intended results, with (optional) gold answer
+                new_arg1_string = f"[SEP]{sample['relation_class']}[SEP]" + ' ... ' + sample['arg1']
 
             elif mode==2 or mode==3:
                 #use Jeon segmentations
