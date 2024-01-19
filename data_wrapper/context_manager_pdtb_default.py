@@ -125,7 +125,8 @@ class ContextManagerPDTB2:
                                     "start":prior_connective_start,
                                     "end":prior_connective_end,
                                     "text":prior_connective,
-                                    "type":prior_discourse_type
+                                    "type":prior_discourse_type,
+                                    "relation_class":prior_dep["relation_class"]
                                 }
 
                                 # prior_connective_positions are now set
