@@ -105,7 +105,8 @@ class ContextManagerPDTB2:
                                     "start":prior_connective_position,
                                     "end":None,
                                     "text":prior_connective,
-                                    "type":prior_discourse_type
+                                    "type":prior_discourse_type,
+                                    "relation_class":prior_dep["relation_class"]
                                 }
 
                                 # if emphasise_connectives:               #this block is now defunct 20240110

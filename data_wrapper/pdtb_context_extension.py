@@ -342,6 +342,8 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             #--------------------------------
                             new_merged_string = ""
                             last_connective_offset = 0
+                            relationships = [""]
+
                             for connective_edit in some_context_connective_list:
                                 connective_start_pos = connective_edit["start"] - merged_boundary[0]
                                 new_merged_string += merged_arg1_string[last_connective_offset:connective_start_pos]
@@ -360,11 +362,13 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                                     new_merged_string += f"{ex_connective_start_delimiter}{connective}{ex_connective_end_delimiter}"
                                     last_connective_offset = connective_end_pos
+                                    relationships.append(connective_edit["relation_class"])
 
                                 elif connective_edit["type"] == "____Implicit____":
                                     if FLAG_inject_implicit_connectives:
                                         connective = connective_edit["text"]
                                         new_merged_string += f"{im_connective_start_delimiter}{connective}{im_connective_end_delimiter}"
+                                    relationships.append(connective_edit["relation_class"])
 
                             new_merged_string += merged_arg1_string[last_connective_offset:]  #consume remainder of the string
 
@@ -379,6 +383,8 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                             #add delimiter before arg1
                             new_arg1_string = new_arg1_string.replace(sample['arg1'], ' ... '+sample['arg1'])
+
+                            new_arg1_string = relationships[-1]+' ... '+sample['arg1']  #hack to just use last relation_class as context
 
                             # print(f"new arg1: {new_arg1_string}")
                             # print(f"-------------------------------------------")
