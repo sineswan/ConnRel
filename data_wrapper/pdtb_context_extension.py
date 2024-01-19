@@ -220,20 +220,19 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
             elif mode==1:
 
                 FLAG_debug_preprocessing = False
+                FLAG_debug_test_ML_learning = False
 
                 if context_size > 0: #Need to the prune context as needed
                     #1 < context_size < 99: means amount of gold relationships to use
                     chained_context = annotations[i]["context"]["chained"]
                     chained_context_offsets = annotations[i]["context"]["chained_offsets"]
 
-                    if FLAG_debug_preprocessing:
-                        print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
+                    if FLAG_debug_preprocessing: print(f"SUMMARY: chained_length consider_all={FLAG_consider_all}: {len(chained_context)}")
 
                     if len(chained_context) > 0:
                         if FLAG_debug_preprocessing:
                             print(f"\n {chained_context}  & {sample['arg1']} # {sample['conn']} @ {sample['arg2']}\n")
                             print(f"\n {chained_context_offsets}")
-
                             print(f"-------------------------------------------")
                             print(f"chained_context: {chained_context}, chained_context_offsets: {chained_context_offsets}")
 
@@ -242,7 +241,6 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                         if FLAG_debug_preprocessing:
                             print(f"kept_spans: {kept_spans}, boundary: {boundary}")
-
 
                         processed_chained_context = []
                         for key in sorted(kept_spans.keys()):
@@ -275,7 +273,7 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                         #now add the context
                         some_context = ". ".join(some_context_list)
-                        new_arg1_string = some_context + " " + sample["arg1"]           #creating the new string depends on mode
+                        new_arg1_string = some_context + " " + sample["arg1"]   #creating the new string depends on mode
 
                         if FLAG_preprocessing_version==3:
                             """
@@ -287,8 +285,8 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             (2) Here, we can insert, connectives (since this version keeps track of span edits for connectives.
                             Default: leave blank, don't add connectives. """
 
-                            FLAG_replace_missing_text = False
-                            FLAG_inject_implicit_connectives = True
+                            FLAG_replace_missing_text = True
+                            FLAG_inject_implicit_connectives = False
 
                             context_and_args = [x for x in some_context_list]
                             context_and_args.append(sample["arg1"])
@@ -298,7 +296,6 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             #--------------------------------
                             # Preprocessing v3: Merge arg1 and context
                             #--------------------------------
-                            
                             #check for overlaps
                             merged_context_arg1, merged_boundary = \
                                 unentangler.make_non_overlapping_context_chain(context_and_args, context_and_args_offsets)
@@ -328,21 +325,16 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                                         padding = "".ljust(diff, " ")     #need to -1 as slices are right-exclusive
 
-                                    if FLAG_debug_preprocessing:
-                                        print(f"padding: {last_seen_offset+1}-{component_start}//{padding}//")
+                                    if FLAG_debug_preprocessing: print(f"padding: {last_seen_offset+1}-{component_start}//{padding}//")
 
                                 last_seen_offset = component_end
                                 merged_context_arg1_texts.append(f"{padding}{component_text}")
 
-
-                            if FLAG_debug_preprocessing:
-                                print(f"merged_context_arg1_texts: {merged_context_arg1_texts}")
+                            if FLAG_debug_preprocessing: print(f"merged_context_arg1_texts: {merged_context_arg1_texts}")
 
                             merged_arg1_string = "".join(merged_context_arg1_texts)
 
-
-                            if FLAG_debug_preprocessing:
-                                print(f"merged_arg1_string: {merged_arg1_string}")
+                            if FLAG_debug_preprocessing: print(f"merged_arg1_string: {merged_arg1_string}")
 
                             #--------------------------------
                             # Preprocessing v3: 
@@ -351,7 +343,6 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             new_merged_string = ""
                             last_connective_offset = 0
                             for connective_edit in some_context_connective_list:
-
                                 connective_start_pos = connective_edit["start"] - merged_boundary[0]
                                 new_merged_string += merged_arg1_string[last_connective_offset:connective_start_pos]
                                 last_connective_offset = connective_start_pos
@@ -389,15 +380,14 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             #add delimiter before arg1
                             new_arg1_string = new_arg1_string.replace(sample['arg1'], ' ... '+sample['arg1'])
 
-
-
                             # print(f"new arg1: {new_arg1_string}")
                             # print(f"-------------------------------------------")
 
                 # print(f"SUMMARY: Context len dist: {context_len_dist}")  # print to stdout distribution of context offset lengths for this preprocessing job
 
                 # DEBUGGING ONLY  -- check if original arg1 gives intended results, with (optional) gold answer
-                new_arg1_string = f"[SEP]{sample['relation_class']}[SEP]" + ' ... ' + sample['arg1']
+                if FLAG_debug_test_ML_learning:
+                    new_arg1_string = f"[SEP]{sample['relation_class']}[SEP]" + ' ... ' + sample['arg1']
 
             elif mode==2 or mode==3:
                 #use Jeon segmentations
