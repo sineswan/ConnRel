@@ -287,6 +287,7 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
 
                             FLAG_replace_missing_text = True
                             FLAG_inject_implicit_connectives = False
+                            FLAG_useRelClass = True
 
                             context_and_args = [x for x in some_context_list]
                             context_and_args.append(sample["arg1"])
@@ -384,7 +385,8 @@ def read_pdtb_sample(cur_samples, input_filename, raw_text_location, dataset="pd
                             #add delimiter before arg1
                             new_arg1_string = new_arg1_string.replace(sample['arg1'], ' ... '+sample['arg1'])
 
-                            new_arg1_string = relationships[-1]+' ... '+sample['arg1']  #hack to just use last relation_class as context
+                            if FLAG_useRelClass:
+                                new_arg1_string = relationships[-1]+new_arg1_string  #hack to just use last relation_class as context
 
                             # print(f"new arg1: {new_arg1_string}")
                             # print(f"-------------------------------------------")
