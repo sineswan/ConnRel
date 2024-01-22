@@ -18,15 +18,25 @@ def pick_conn(label):
     return result
 
 
-def convert(relation):
+def convert(relation, context_index=None):
     id = relation["doc"]+"."+relation["unit1_toks"]+"."+relation["unit2_toks"]
 
-    arg1 = relation["unit1_sent"]
-    arg2 = relation["unit2_sent"]
+    arg1 = relation["unit1_txt"]
+    arg2 = relation["unit2_txt"]
     if relation["dir"] == "1>2":
-        arg1 = relation["unit2_sent"]
-        arg2 = relation["unit1_sent"]
+        arg1 = relation["unit2_txt"]
+        arg2 = relation["unit1_txt"]
     label = relation["label"]
+    filename = relation["doc"]
+    print(filename)
+
+    #find context
+    if context_index:
+        context = None
+        an_index = context_index[filename+".edu.txt.dep"]
+        context = an_index[arg1]
+        arg1 = context + " ... " + arg1
+
 
     #determine connective
     conn = get_first_word(arg2)
