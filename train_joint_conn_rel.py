@@ -296,6 +296,9 @@ def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc
         file_name = os.path.join(pred_dir, "joint+{}_l{}+{}+{}.txt".format(
             desc, args.label_level, epoch, args.seed))
         error_num = 0
+
+        print(f"writing to : {file_name}")
+
         with open(file_name, "w", encoding="utf-8") as f:
             f.write("%-16s\t%-16s\t%-16s\t%-16s\t%s\n" % ("Conn", "Pred_conn", "Label", "Pred", "Text"))
             for conn, pred_conn, label, pred, text in zip(
@@ -306,6 +309,8 @@ def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc
                 else:
                     error_num += 1
                     f.write("%-16s\t%-16s\t%-16s\t%-16s\t%s\n" % (conn, pred_conn, label, pred, str(error_num) + " " + text))
+    else:
+        print(f"Not writing predictions")
 
     return conn_acc, acc, f1
 
