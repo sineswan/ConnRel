@@ -28,15 +28,27 @@ def convert(relation, context_index=None):
         arg2 = relation["unit1_txt"]
     label = relation["label"]
     filename = relation["doc"]
-    print(filename)
+    print(id)
 
     #find context
     if context_index:
         context = None
         an_index = context_index[filename+".edu.txt.dep"]
-        context = an_index[arg1]
+        context = ""
+        if arg1 in an_index.keys():
+            context = an_index[arg1]
+        else:
+            #have to use fuzzy matching
+            for key in an_index.keys():
+                if arg1.startswith(key) or key.startswith(arg1):
+                    context = an_index[key]
+                    break
+            if context == "": #still empty
+                print(f"WARNING: missing context for {id}, arg1: {arg1}")
+        if not context: #context is a None
+            context = ""
+            print(f"WARNING: empty context for {id}, arg1: {arg1}")
         arg1 = context + " ... " + arg1
-
 
     #determine connective
     conn = get_first_word(arg2)
