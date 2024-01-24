@@ -27,11 +27,20 @@ if __name__ == "__main__":
                 "context":{}, "no_context":{}
             }
 
+        is_context = False
         if "context" in data.keys():
             if not data["context"] == "":
-                hist[data_type][data_class]["context"][i] = data
-            else:
-                hist[data_type][data_class]["no_context"][i] = data
+                is_context = True
+        else:
+            parts = data["arg1"].strip().split(" ... ")
+            if len(parts) > 1\
+                    and not parts[0].strip() == "ROOT":
+                is_context = True
+
+        if is_context:
+            hist[data_type][data_class]["context"][i] = data
+        else:
+            hist[data_type][data_class]["no_context"][i] = data
 
     #print data
     for relation_type in hist.keys():
@@ -41,7 +50,7 @@ if __name__ == "__main__":
             context_num = len(hist[relation_type][relation_class][context_class].keys())
             no_context_num = len(hist[relation_type][relation_class][no_context_class].keys())
 
-            percentage = 1
-            if no_context_num>0:
-                percentage = float(context_num)/float(no_context_num)
-            print(f"--{relation_type}.{relation_class}.{context_class}: {context_num}/{no_context_num} == {str(percentage)}")
+            percentage = 1.0
+            denominator =float(no_context_num)+float(context_num)
+            percentage = int(float(context_num)/denominator*100)
+            print(f"--{relation_type}.{relation_class}.{context_class}: {context_num}/{denominator} == {str(percentage)}%")
