@@ -59,6 +59,15 @@ def analyse_trees_for_relation_connectives_mappings(trees):
 
 
 def create_context_indices(trees, context_mode=1):
+    """
+    Args:
+        trees:
+        context_mode:
+
+    Returns: an dict of records, "self" is the data point, "context" is an array of the
+    preceding context records, ordered so that the immediate parent is 1st and going down array goes up ancestry.
+
+    """
 
     #ANALYSE relation-first_word mappings
     index = {}
@@ -69,7 +78,6 @@ def create_context_indices(trees, context_mode=1):
             edges = a_tree["root"]
             edge_lookup = {}
             for edge in edges:
-                text = edge["text"]
                 edge_id = edge["id"]
                 edge_lookup[edge_id] = edge
 
@@ -88,7 +96,7 @@ def create_context_indices(trees, context_mode=1):
                         prev_id = edge_id - 1
                         context = edge_lookup[prev_id]
 
-                reverse_index[text] = context
+                reverse_index[text] = {"self":edge, "context":[context]}
             index[data_split_key][filename] = reverse_index
 
     return index

@@ -19,6 +19,18 @@ def pick_conn(label):
 
 
 def convert(relation, context_index=None,  context_mode=None, context_size=0, dataset_fileext=".edu.txt.dep"):
+    """
+
+    Args:
+        relation:
+        context_index: a dicts.  "context" key is an ordered array of context records for this relation
+        context_mode:
+        context_size:
+        dataset_fileext:
+
+    Returns:
+
+    """
     id = relation["doc"]+"."+relation["unit1_toks"]+"."+relation["unit2_toks"]
 
     arg1 = relation["unit1_txt"]
@@ -50,19 +62,22 @@ def convert(relation, context_index=None,  context_mode=None, context_size=0, da
     #find context
     if context_mode:
         context_record = None
+        provenance = None
         if context_index:
             context = None
             an_index = context_index[filename+dataset_fileext]
             context = ""
             if arg1 in an_index.keys():
-                context_record = an_index[arg1]
+                provenance = an_index[arg1]
+                context_record = provenance["context"][0]
                 if context_record:
                     context = context_record["text"]
             else:
                 #have to use fuzzy matching
                 for key in an_index.keys():
                     if arg1.startswith(key) or key.startswith(arg1):
-                        context_record = an_index[key]
+                        provenance = an_index[key]
+                        context_record = provenance["context"][0]
                         if context_record:
                             context = context_record["text"]
                         break
@@ -74,7 +89,7 @@ def convert(relation, context_index=None,  context_mode=None, context_size=0, da
 
             result["arg1"] = context + " ... " + arg1
             result["context"] = context
-            result["context_provenance"] = context_record
+            result["context_provenance"] = provenance
 
     #determine connective
     conn = get_first_word(arg2)
