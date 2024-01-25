@@ -58,7 +58,7 @@ def analyse_trees_for_relation_connectives_mappings(trees):
     return final_relation_connective_mapping
 
 
-def create_context_indices(trees):
+def create_context_indices(trees, context_mode=1):
 
     #ANALYSE relation-first_word mappings
     index = {}
@@ -71,16 +71,23 @@ def create_context_indices(trees):
             for edge in edges:
                 text = edge["text"]
                 edge_id = edge["id"]
-                edge_lookup[edge_id] = text
+                edge_lookup[edge_id] = edge
 
             reverse_index = {}
             for edge in edges:
+                edge_id = int(edge["id"])
                 text = edge["text"].replace("<S>", "").strip()
                 parent_edge_id = edge["parent"]
 
                 context = None
-                if parent_edge_id > -1:
-                    context = edge_lookup[parent_edge_id]
+                if context_mode==1:
+                    if parent_edge_id > -1:
+                        context = edge_lookup[parent_edge_id]
+                elif context_mode==3:
+                    if edge_id > 1:
+                        prev_id = edge_id - 1
+                        context = edge_lookup[prev_id]
+
                 reverse_index[text] = context
             index[data_split_key][filename] = reverse_index
 
@@ -92,6 +99,8 @@ if __name__ == "__main__":
     parser.add_argument("--disrpt_input", required=True)
     parser.add_argument("--scidtb_input", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--context_mode", type=int, default=None, help="None:default; 0:all, 1:PDTB_gold, 2:Jeon_segments; 3:Always_last_sentence")
+    parser.add_argument("--context_size", type=int, default=1)
     args = parser.parse_args()
 
 
@@ -141,7 +150,7 @@ if __name__ == "__main__":
     final_relation_connective_mapping = analyse_trees_for_relation_connectives_mappings(trees)        #finds candidate connectives for relations empirically
     print(f"{json.dumps(final_relation_connective_mapping, indent=3)}")
 
-    context_index = create_context_indices(trees)
+    context_index = create_context_indices(trees, context_mode=args.context_mode)
 
     #--------------------------------------------
     #read in disrpt scidtb relations (data points)
@@ -158,7 +167,8 @@ if __name__ == "__main__":
         print(f"data_split: {data_split_key}")
         output_data = []
         for relation in relations[data_split_key]:
-            corrected = scidtb_to_connrel_converter.convert(relation, context_index[data_split_key])
+            corrected = scidtb_to_connrel_converter.convert(relation, context_index[data_split_key],
+                                                            context_mode=args.context_mode, context_size=args.context_size)
             output_data.append(corrected)
 
             if not corrected["relation_class"] in label_set:

@@ -18,7 +18,7 @@ def pick_conn(label):
     return result
 
 
-def convert(relation, context_index=None):
+def convert(relation, context_index=None,  context_mode=None, context_size=0, dataset_fileext=".edu.txt.dep"):
     id = relation["doc"]+"."+relation["unit1_toks"]+"."+relation["unit2_toks"]
 
     arg1 = relation["unit1_txt"]
@@ -30,25 +30,51 @@ def convert(relation, context_index=None):
     filename = relation["doc"]
     print(id)
 
+    #initialise final record
+    result = {
+        "id":id,
+        "relation_class": None,
+        "arg1": arg1,
+        "arg1_org": arg1,
+        "arg2": arg2,
+        "conn": None,
+        "relation_type": "Implicit",
+        "context": None,
+        "truncation_length": None,
+        "arg1_org_len": len(arg1),
+        "context_mode": context_mode,
+        "context_size": context_size,
+        "context_provenance": None
+    }
+
     #find context
-    if context_index:
-        context = None
-        an_index = context_index[filename+".edu.txt.dep"]
-        context = ""
-        if arg1 in an_index.keys():
-            context = an_index[arg1]
-        else:
-            #have to use fuzzy matching
-            for key in an_index.keys():
-                if arg1.startswith(key) or key.startswith(arg1):
-                    context = an_index[key]
-                    break
-            if context == "": #still empty
-                print(f"WARNING: missing context for {id}, arg1: {arg1}")
-        if not context: #context is a None
+    if context_mode:
+        context_record = None
+        if context_index:
+            context = None
+            an_index = context_index[filename+dataset_fileext]
             context = ""
-            print(f"WARNING: empty context for {id}, arg1: {arg1}")
-        arg1 = context + " ... " + arg1
+            if arg1 in an_index.keys():
+                context_record = an_index[arg1]
+                if context_record:
+                    context = context_record["text"]
+            else:
+                #have to use fuzzy matching
+                for key in an_index.keys():
+                    if arg1.startswith(key) or key.startswith(arg1):
+                        context_record = an_index[key]
+                        if context_record:
+                            context = context_record["text"]
+                        break
+                if context == "": #still empty
+                    print(f"WARNING: missing context for {id}, arg1: {arg1}")
+            if not context: #context is a None
+                context = ""
+                print(f"WARNING: empty context for {id}, arg1: {arg1}")
+
+            result["arg1"] = context + " ... " + arg1
+            result["context"] = context
+            result["context_provenance"] = context_record
 
     #determine connective
     conn = get_first_word(arg2)
@@ -70,12 +96,7 @@ def convert(relation, context_index=None):
         corrected_label = corrected_label.split("-")[0]
 
 
-    result = {
-        "relation_class": corrected_label,
-        "arg1": arg1,
-        "arg2": arg2,
-        "conn": conn,
-        "relation_type": "Implicit",
-        "id":id
-    }
+    result["relation_class"] = corrected_label
+    result["conn"] = conn
+
     return result
