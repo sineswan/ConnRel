@@ -74,6 +74,7 @@ def get_argparse():
     parser.add_argument("--truncation_side_right", default=1, type=int, help="1 if we truncate the end of string")
     parser.add_argument("--write_file", default=True, type=bool, help="1 if we write predictions to file")
     parser.add_argument("--write_filestub", default="", type=str, help="filestub for predictions/model")
+    parser.add_argument("--load_checkpoint", default=1, type=int, help="checkpoint to load if do_dev or do_test")
 
     return parser
 
@@ -398,9 +399,13 @@ def main():
         train(model, args, train_dataset, dev_dataset, test_dataset, conn_list, label_list, tokenizer)
 
     if args.do_dev or args.do_test:
+        #these must be the best checkpoints from Wei's expts.
         # l1_ji, 5, 8, 9, 5, 9
-        seed_epoch = {106524: 5, 106464: 8, 106537: 9, 219539: 5, 430683: 7}
-        epoch = seed_epoch[args.seed]
+        # seed_epoch = {106524: 5, 106464: 8, 106537: 9, 219539: 5, 430683: 7}
+        # epoch = seed_epoch[args.seed]
+        epoch = 1
+        if args.load_checkpoint:
+            epoch = args.load_checkpoint
         checkpoint_file = os.path.join(os.path.join(args.output_dir, args.write_filestub), "model/checkpoint_{}/pytorch_model.bin".format(epoch))
         print(checkpoint_file)
         model.load_state_dict(torch.load(checkpoint_file))
