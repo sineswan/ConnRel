@@ -73,6 +73,7 @@ def get_argparse():
     #SW: adding parameter to control truncation side.  Needed if padding with context.
     parser.add_argument("--truncation_side_right", default=1, type=int, help="1 if we truncate the end of string")
     parser.add_argument("--write_file", default=True, type=bool, help="1 if we write predictions to file")
+    parser.add_argument("--write_filestub", default="", type=str, help="filestub for predictions/model")
 
     return parser
 
@@ -192,10 +193,12 @@ def train(model, args, train_dataset, dev_dataset, test_dataset, conn_list, labe
         #     model, args, train_dataset, conn_list, label_list, tokenizer, epoch, desc="train"
         # )
         dev_conn_acc, dev_acc, dev_f1 = evaluate(
-            model, args, dev_dataset, conn_list, label_list, tokenizer, epoch, desc="dev", write_file=args.write_file
+            model, args, dev_dataset, conn_list, label_list, tokenizer, epoch, desc="dev",
+            write_file=args.write_file, write_filestub=args.write_filestub
         )
         test_conn_acc, test_acc, test_f1 = evaluate(
-            model, args, test_dataset, conn_list, label_list, tokenizer, epoch, desc="test", write_file=args.write_file
+            model, args, test_dataset, conn_list, label_list, tokenizer, epoch, desc="test",
+            write_file=args.write_file, write_filestub=args.write_filestub
         )
         res_list.append((dev_acc, dev_f1, test_acc, test_f1))
         print(" Epoch=%d"%(epoch))
@@ -210,7 +213,7 @@ def train(model, args, train_dataset, dev_dataset, test_dataset, conn_list, labe
             best_test_epoch = epoch
 
         # output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
-        output_dir = os.path.join(args.output_dir, "model")
+        output_dir = os.path.join(os.path.join(args.output_dir, args.write_filestub), "model")
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         os.makedirs(output_dir, exist_ok=True)
         torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
@@ -222,9 +225,10 @@ def train(model, args, train_dataset, dev_dataset, test_dataset, conn_list, labe
         best_test_epoch, res_list[best_test_epoch-1][2], res_list[best_test_epoch-1][3])
     )
 
-def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc="dev", write_file=True):
+def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc="dev", write_file=True,
+             write_filestub=""):
 
-    print(f"Running evaluate: {desc}, ep:{epoch}, write_file={write_file}")
+    print(f"Running evaluate: {desc}, ep:{epoch}, write_file={write_file}, filestub: {write_filestub}")
 
     dataloader = get_dataloader(dataset, args, mode=desc)
 
@@ -294,7 +298,7 @@ def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc
         all_input_texts = [
             tokenizer.decode(all_input_ids[i], skip_special_tokens=True) for i in range(len(all_input_ids))
         ]
-        pred_dir = os.path.join(args.data_dir, "preds")
+        pred_dir = os.path.join(os.path.join(args.data_dir, write_filestub), "preds")
         os.makedirs(pred_dir, exist_ok=True)
         file_name = os.path.join(pred_dir, "joint+{}_l{}+{}+{}.txt".format(
             desc, args.label_level, epoch, args.seed))
@@ -397,7 +401,7 @@ def main():
         # l1_ji, 5, 8, 9, 5, 9
         seed_epoch = {106524: 5, 106464: 8, 106537: 9, 219539: 5, 430683: 7}
         epoch = seed_epoch[args.seed]
-        checkpoint_file = os.path.join(args.output_dir, "model/checkpoint_{}/pytorch_model.bin".format(epoch))
+        checkpoint_file = os.path.join(os.path.join(args.output_dir, args.write_filestub), "model/checkpoint_{}/pytorch_model.bin".format(epoch))
         print(checkpoint_file)
         model.load_state_dict(torch.load(checkpoint_file))
         model.eval()
@@ -406,14 +410,16 @@ def main():
             dataset = JointRobertaBaseDataset(dev_data_file, params=dataset_params)
             conn_acc, acc, f1 = evaluate(
                 model, args, dataset, conn_list, label_list, tokenizer,
-                epoch, desc="dev", write_file=args.write_file
+                epoch, desc="dev",
+                write_file=args.write_file, write_filestub=args.write_filestub
             )
             print(" Dev: conn_acc=%.4f, acc=%.4f, f1=%.4f\n" % (conn_acc, acc, f1))
         if args.do_test:
             dataset = JointRobertaBaseDataset(test_data_file, params=dataset_params)
             conn_acc, acc, f1 = evaluate(
                 model, args, dataset, conn_list, label_list, tokenizer,
-                epoch, desc="test", write_file=args.write_file
+                epoch, desc="test",
+                write_file=args.write_file, write_filestub=args.write_filestub
             )
             print("Test: conn_acc=%.4f, acc=%.4f, f1=%.4f\n" % (conn_acc, acc, f1))
 
