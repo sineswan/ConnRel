@@ -72,7 +72,7 @@ def get_argparse():
 
     #SW: adding parameter to control truncation side.  Needed if padding with context.
     parser.add_argument("--truncation_side_right", default=1, type=int, help="1 if we truncate the end of string")
-    parser.add_argument("--write_file", default=0, type=int, help="1 if we write predictions to file")
+    parser.add_argument("--write_file", default=True, type=bool, help="1 if we write predictions to file")
 
     return parser
 
@@ -192,10 +192,10 @@ def train(model, args, train_dataset, dev_dataset, test_dataset, conn_list, labe
         #     model, args, train_dataset, conn_list, label_list, tokenizer, epoch, desc="train"
         # )
         dev_conn_acc, dev_acc, dev_f1 = evaluate(
-            model, args, dev_dataset, conn_list, label_list, tokenizer, epoch, desc="dev", write_file=args.write_file==1
+            model, args, dev_dataset, conn_list, label_list, tokenizer, epoch, desc="dev", write_file=args.write_file
         )
         test_conn_acc, test_acc, test_f1 = evaluate(
-            model, args, test_dataset, conn_list, label_list, tokenizer, epoch, desc="test", write_file=args.write_file==1
+            model, args, test_dataset, conn_list, label_list, tokenizer, epoch, desc="test", write_file=args.write_file
         )
         res_list.append((dev_acc, dev_f1, test_acc, test_f1))
         print(" Epoch=%d"%(epoch))
@@ -222,7 +222,10 @@ def train(model, args, train_dataset, dev_dataset, test_dataset, conn_list, labe
         best_test_epoch, res_list[best_test_epoch-1][2], res_list[best_test_epoch-1][3])
     )
 
-def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc="dev", write_file=False):
+def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc="dev", write_file=True):
+
+    print(f"Running evaluate: {desc}, ep:{epoch}, write_file={write_file}")
+
     dataloader = get_dataloader(dataset, args, mode=desc)
 
     all_input_ids = None
@@ -297,7 +300,7 @@ def evaluate(model, args, dataset, conn_list, label_list, tokenizer, epoch, desc
             desc, args.label_level, epoch, args.seed))
         error_num = 0
 
-        print(f"writing to : {file_name}")
+        print(f"TRACE writing to : {file_name}")
 
         with open(file_name, "w", encoding="utf-8") as f:
             f.write("%-16s\t%-16s\t%-16s\t%-16s\t%s\n" % ("Conn", "Pred_conn", "Label", "Pred", "Text"))
