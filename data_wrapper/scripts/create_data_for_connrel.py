@@ -33,6 +33,8 @@ do
                                     --sample_k=100 \\
                                     --seed=${seed} \\
                                     --relation_type="implicit" \\
+                                    --write_file=1 \\
+                                    --write_filestub="run-" \\
                                     --data_dir="__HOME____DATALOC__"
 done
 
