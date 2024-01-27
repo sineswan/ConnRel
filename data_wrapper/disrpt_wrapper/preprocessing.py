@@ -39,8 +39,9 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     #write data to disk
     data_set_dirname = disrpt_dataset.replace(".", "_")
     mode_dirname = f"mode-{context_mode}-context-{context_size}"
-    data_mode_dir = os.path.join(output,  data_set_dirname, "withContext", mode_dirname, data_set_dirname, "fine")
-    os.makedirs(data_mode_dir, exist_ok=True)
+    data_mode_dir = os.path.join(output,  data_set_dirname, "withContext", mode_dirname)
+    data_final_output = os.path.join(data_mode_dir, data_set_dirname, "fine")
+    os.makedirs(data_final_output, exist_ok=True)
 
     for data_split_key in relations.keys():
         # read in the conllu files to get org text
@@ -67,11 +68,11 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
             if not corrected["relation_class"] in label_set:
                 label_set.append(corrected["relation_class"])
 
-        with open(os.path.join(data_mode_dir, data_split_key+".json"), "w") as output_file:
+        with open(os.path.join(data_final_output, data_split_key+".json"), "w") as output_file:
             for datum in output_data:
                 output_file.write(json.dumps(datum)+"\n")
 
-    with open(os.path.join(data_mode_dir, "labels_level_1.txt"), "w") as output_file:
+    with open(os.path.join(data_final_output, "labels_level_1.txt"), "w") as output_file:
         for label in label_set:
             output_file.write(label+"\n")
 
