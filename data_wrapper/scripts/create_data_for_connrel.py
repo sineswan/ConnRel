@@ -33,7 +33,7 @@ do
                                     --sample_k=100 \\
                                     --seed=${seed} \\
                                     --relation_type="implicit" \\
-                                    --data_dir="__DATALOC__"
+                                    --data_dir="__HOME____DATALOC__"
 done
 
 
@@ -47,6 +47,7 @@ if __name__ == "__main__":
     parser.add_argument("--disrpt_input", required=True)
     parser.add_argument("--ddtb_input", default=None)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--home", default="")
     args = parser.parse_args()
 
     datasets = [
@@ -73,6 +74,7 @@ if __name__ == "__main__":
                     slurm_script = slurm_script.replace("__MODE__", str(mode))
                     slurm_script = slurm_script.replace("__SIZE__", str(size))
                     slurm_script = slurm_script.replace("__LABEL_LEVEL__", str(label_level))
+                    slurm_script = slurm_script.replace("__HOME__", args.home)
 
                     slurm_script_dir = os.path.join(args.output, "slurm")
                     os.makedirs(slurm_script_dir, exist_ok=True)
