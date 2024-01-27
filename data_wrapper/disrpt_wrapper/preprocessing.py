@@ -75,6 +75,8 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         for label in label_set:
             output_file.write(label+"\n")
 
+    return data_mode_dir, data_set_dirname
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--disrpt_input", required=True)
