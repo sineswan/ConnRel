@@ -5,6 +5,13 @@ import data_wrapper.disrpt_wrapper.ddtb_to_connrel_converter as ddtb_wrapper
 
 def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_size, ddtb_input):
 
+    #prepare variables/directories for output
+    data_set_dirname = disrpt_dataset.replace(".", "_")
+    mode_dirname = f"mode-{context_mode}-context-{context_size}"
+    data_mode_dir = os.path.join(output,  data_set_dirname, "withContext", mode_dirname)
+    data_final_output = os.path.join(data_mode_dir, data_set_dirname, "fine")
+    os.makedirs(data_final_output, exist_ok=True)
+
     #--------------------------------------------
     #read in the ddtb trees if they exist
     #--------------------------------------------
@@ -12,11 +19,15 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     final_relation_connective_mapping = None
     context_index = None
     if ddtb_input:
-        trees = ddtb_wrapper.read_ddtb_trees(ddtb_input)
+        trees = ddtb_wrapper.read_ddtb_trees(ddtb_input=ddtb_input, dataset_name=disrpt_dataset)
 
         # finds candidate connectives for relations empirically
         final_relation_connective_mapping = ddtb_wrapper.analyse_trees_for_relation_connectives_mappings(trees)
-        print(f"{json.dumps(final_relation_connective_mapping, indent=3)}")
+        connective_mapping_str = f"{json.dumps(final_relation_connective_mapping, indent=3)}"
+        print(connective_mapping_str)
+
+        with open(os.path.join(data_final_output, "final_relation_connective_mapping.json"), "w") as output_file:
+            output_file.write(connective_mapping_str)
 
         context_index = ddtb_wrapper.create_context_indices(trees, context_mode=context_mode)
 
@@ -37,11 +48,6 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         docs_data[data_split_key] = docs
 
     #write data to disk
-    data_set_dirname = disrpt_dataset.replace(".", "_")
-    mode_dirname = f"mode-{context_mode}-context-{context_size}"
-    data_mode_dir = os.path.join(output,  data_set_dirname, "withContext", mode_dirname)
-    data_final_output = os.path.join(data_mode_dir, data_set_dirname, "fine")
-    os.makedirs(data_final_output, exist_ok=True)
 
     for data_split_key in relations.keys():
         # read in the conllu files to get org text
@@ -56,9 +62,11 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         for relation in relations[data_split_key]:
             corrected = None
             # Check if this is a ddtb style set and we have the DDTB source files
-            if disrpt_dataset.find(".dep.") and ddtb_input:
-                corrected = disrpt_wrapper.convert(relation,
-                                                    context_mode=context_mode, context_size=context_size)
+            if disrpt_dataset.find(".dep.") and ddtb_input and context_mode==1:
+                corrected = ddtb_wrapper.convert(relation, context_index=context_index[data_split_key],
+                                                 context_mode=context_mode, context_size=context_size,
+                                                 _filtered_conns=final_relation_connective_mapping,
+                                                 dataset_name=disrpt_dataset)
             else:
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
                                                    raw_texts=raw_texts,

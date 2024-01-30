@@ -561,3 +561,14 @@ scidtb_filtered_connectives = \
        "in conclusion":9999
    }
 }
+
+
+filtered_connectives = {
+   "eng.dep.scidtb":scidtb_filtered_connectives
+}
+
+
+ddtb_dataset_file_extensions = {
+   "eng.dep.scidtb":".edu.txt.dep",
+   "eng.dep.covdtb":".dep"
+}

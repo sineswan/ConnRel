@@ -199,7 +199,7 @@ def convert(relation,  relations, raw_texts,
                 break   #assume 1 match only
         if not matched_sentence:
             print(f"Didn't find match for {doc_id} {arg1_sentence}")
-            0/1
+            # 0/1  #hack to debug
         else:
             context = ""
             if cursor>0 and cursor<len(sentences):

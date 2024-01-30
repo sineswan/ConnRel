@@ -1,8 +1,8 @@
 import os, json
-from data_wrapper.disrpt_wrapper.resources import scidtb_filtered_connectives as filtered_conns
+from data_wrapper.disrpt_wrapper.resources import filtered_connectives as manual_filtered_conns, ddtb_dataset_file_extensions
 import data_wrapper.disrpt_wrapper.disrpt_to_connrel_converter as disrpt_wrapper
 
-def pick_conn(label):
+def pick_conn(label, filtered_conns):
     a_dict = filtered_conns[label]
     sorted_hist = {k: v for k, v in sorted(a_dict.items(), key=lambda item: item[1], reverse=True)}
     result = None
@@ -14,7 +14,7 @@ def pick_conn(label):
 
 
 def convert(relation, context_index=None,  context_mode=None,
-            context_size=0, label_level=0, dataset_fileext=".edu.txt.dep"):
+            context_size=0, label_level=0, _filtered_conns=None, dataset_name=None):
     """
 
     Args:
@@ -32,78 +32,94 @@ def convert(relation, context_index=None,  context_mode=None,
     arg2 = relation["unit1_txt"]
     label = relation["label"]
     filename = relation["doc"]
+    dataset_fileext = ddtb_dataset_file_extensions[dataset_name]
 
     #find context
     if context_mode:
-        context_record = None
-        provenance = None
-        if context_index:
-            context = None
-            an_index = context_index[filename+dataset_fileext]
-            context = ""
-            if arg1 in an_index.keys():
-                provenance = an_index[arg1]
-                context_record = provenance["context"][0]
-                if context_record:
-                    context = context_record["text"]
-            else:
-                #have to use fuzzy matching
-                for key in an_index.keys():
-                    if arg1.startswith(key) or key.startswith(arg1):
-                        provenance = an_index[key]
-                        context_record = provenance["context"][0]
-                        if context_record:
-                            context = context_record["text"]
-                        break
-                if context == "": #still empty
-                    print(f"WARNING: missing context for {id}, arg1: {arg1}")
-            if not context: #context is a None
+        if context_mode==1:
+            context_record = None
+            provenance = None
+            if context_index:
+                context = None
+                an_index = context_index[filename+dataset_fileext]
                 context = ""
-                print(f"WARNING: empty context for {id}, arg1: {arg1}")
+                if arg1 in an_index.keys():
+                    provenance = an_index[arg1]
+                    context_record = provenance["context"][0]
+                    if context_record:
+                        context = context_record["text"]
+                else:
+                    #have to use fuzzy matching
+                    for key in an_index.keys():
+                        if arg1.startswith(key) or key.startswith(arg1):
+                            provenance = an_index[key]
+                            context_record = provenance["context"][0]
+                            if context_record:
+                                context = context_record["text"]
+                            break
+                    if context == "": #still empty
+                        print(f"WARNING: missing context for {id}, arg1: {arg1}")
+                if not context: #context is a None
+                    context = ""
+                    print(f"WARNING: empty context for {id}, arg1: {arg1}")
 
-            result["arg1"] = context + " ... " + arg1
-            result["context"] = context
-            result["context_provenance"] = provenance
+                result["arg1"] = context + " ... " + arg1
+                result["context"] = context
+                result["context_provenance"] = provenance
 
-    #determine connective
-    conn = disrpt_wrapper.get_first_word(arg2)
-    alt_arg2 = disrpt_wrapper.get_tail(arg2)
-    if label in filtered_conns.keys():      #need to parameterise filtered_conns
-        if conn in filtered_conns[label].keys():
-            #this conn is in the vetted list, so use it, and pop it from arg2 (==alt_arg2)
-            result["arg2"] = alt_arg2
-        else:
-            #this conn is NOT in vetted list, pick another from the vetted list
-            #keep arg2 as it is
-            conn = pick_conn(label)
-    else:
-        print(f"WARNING: Missing label: {label}")
-        conn = "and"
-    result["conn"] = conn
+            #determine connective
+            conn = disrpt_wrapper.get_first_word(arg2)
+            alt_arg2 = disrpt_wrapper.get_tail(arg2)
+            filtered_conns = _filtered_conns
+            if dataset_name in manual_filtered_conns.keys():
+                filtered_conns = manual_filtered_conns[dataset_name]
+                print(f"Using manual filtered connectives mapping for {dataset_name}")
+            if label in filtered_conns.keys():      #need to parameterise filtered_conns
+                # print(f"DEBUG: found label: {label}")
+                if conn in filtered_conns[label].keys():
+                    #this conn is in the vetted list, so use it, and pop it from arg2 (==alt_arg2)
+                    result["arg2"] = alt_arg2
+                else:
+                    #this conn is NOT in vetted list, pick another from the vetted list
+                    #keep arg2 as it is
+                    conn = pick_conn(label, filtered_conns)
+            else:
+                print(f"WARNING: Missing label: {label}")
+                conn = "and"
+            result["conn"] = conn
 
     return result
 
-def read_ddtb_trees(ddtb_input):
+def read_ddtb_trees(ddtb_input, dataset_name):
     trees = {
         "dev":{},
         "train":{},
         "test":{}
     }
 
-    ddtb_dir_structure = {
-        "dev": "dataset/dev/gold",
-        "test": "dataset/test/gold",
-        "train": "dataset/train"
-    }
+    ddtb_dir_structure = None
+    if dataset_name=="eng.dep.scidtb":
+        ddtb_dir_structure = {
+            "dev": f"{dataset_name}/dev/gold",
+            "test": f"{dataset_name}/test/gold",
+            "train": f"{dataset_name}/train"
+        }
+    elif dataset_name=="eng.dep.covdtb":
+        ddtb_dir_structure = {
+            "dev": f"{dataset_name}/dev",
+            "test": f"{dataset_name}/test",
+            "train": None
+        }
 
     for data_split_key in trees.keys():
         pathway = ddtb_dir_structure[data_split_key]
-        full_pathway = os.path.join(ddtb_input, pathway)
-        for filename in sorted(os.listdir(full_pathway)):
-            tree_info = read_ddtb_dep_file(os.path.join(full_pathway, filename))
-            trees[data_split_key][filename] = tree_info
+        if pathway:
+            full_pathway = os.path.join(ddtb_input, pathway)
+            for filename in sorted(os.listdir(full_pathway)):
+                tree_info = read_ddtb_dep_file(os.path.join(full_pathway, filename))
+                trees[data_split_key][filename] = tree_info
 
-            # print(f"tree: {json.dumps(tree_info, indent=3)}")
+                # print(f"tree: {json.dumps(tree_info, indent=3)}")
     return trees
 
 def read_ddtb_dep_file(filename):
@@ -155,6 +171,10 @@ def create_context_indices(trees, context_mode=1):
 
     return index
 
+def vet_word(word):
+    if word in ["(", ")", ".", "!", "?", "-"]:
+        return None
+    return word
 
 def analyse_trees_for_relation_connectives_mappings(trees):
 
@@ -171,14 +191,16 @@ def analyse_trees_for_relation_connectives_mappings(trees):
                 elif not int(edge["parent"]) == (int(edge["id"]) - 1):  #only analyse cases where parent directly precedes
                     continue
                 else:
-                    relation = edge["relation"]
+                    relation = edge["relation"].lower()
                     if not relation in relation_connective_mapping.keys():
                         relation_connective_mapping[relation] = {}
                     first_word = edge["text"].lower().split(" ")[0]     #take first word, make lowercase
-                    if first_word not in relation_connective_mapping[relation].keys():
-                        relation_connective_mapping[relation][first_word] = 1
-                    else:
-                        relation_connective_mapping[relation][first_word] += 1
+                    filtered_word = vet_word(first_word)
+                    if filtered_word:
+                        if filtered_word not in relation_connective_mapping[relation].keys():
+                            relation_connective_mapping[relation][filtered_word] = 1
+                        else:
+                            relation_connective_mapping[relation][filtered_word] += 1
 
     final_relation_connective_mapping = {}
     for relation in relation_connective_mapping.keys():
@@ -191,7 +213,7 @@ def analyse_trees_for_relation_connectives_mappings(trees):
             if int(sorted_hist[key]) > 1 :
                 filter_string = ""
                 filtered_connectives[key] = sorted_hist[key]
-            print(f"{relation}: {filter_string} word= {key}, freq= {sorted_hist[key]}")
+            # print(f"{relation}: {filter_string} word= {key}, freq= {sorted_hist[key]}")
         final_relation_connective_mapping[relation] = filtered_connectives
 
     return final_relation_connective_mapping

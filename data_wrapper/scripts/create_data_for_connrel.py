@@ -58,9 +58,9 @@ if __name__ == "__main__":
         "eng.rst.gum"
     ]
 
-    modes = [None, 3]
+    modes = [None, 1, 3]
     sizes = [1]
-    label_levels = [1]
+    label_levels = [1]   #these are not zero-indexed! Careful, functions like ddtb_wrapper.convert expect 0-indexed level.
 
     for dataset in datasets:
         for mode in modes:
@@ -68,7 +68,7 @@ if __name__ == "__main__":
                 for label_level in label_levels:
                     print(f"Processing: {dataset} for mode: {mode} size: {size}")
                     dataloc, data_name = prep.process_dataset(args.disrpt_input, dataset, args.output,
-                                                              mode, size, ddtb_input=None)
+                                                              mode, size, ddtb_input=args.ddtb_input)
 
                     slurm_script = template
                     slurm_script = slurm_script.replace("__DATALOC__", dataloc)
