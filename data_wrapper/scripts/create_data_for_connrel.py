@@ -1,4 +1,6 @@
 import argparse, os
+import json
+
 import data_wrapper.disrpt_wrapper.preprocessing as prep
 
 template = """#! /usr/bin/env bash
@@ -50,6 +52,9 @@ if __name__ == "__main__":
     parser.add_argument("--ddtb_input", default=None)
     parser.add_argument("--output", required=True)
     parser.add_argument("--home", default="")
+    parser.add_argument("--modes", default="[-1, 1,3]", help="json string of list of modes e.g., None, 1,2,3")
+    parser.add_argument("--sizes", default="[1]", help="json string of list of sizes e.g., 1,2,3")
+    parser.add_argument("--label_levels", default="[1]", help="json string of list of label level 1,2,3")
     args = parser.parse_args()
 
     datasets = [
@@ -58,9 +63,14 @@ if __name__ == "__main__":
         "eng.rst.gum"
     ]
 
-    modes = [None, 1, 3]
-    sizes = [1]
-    label_levels = [1]   #these are not zero-indexed! Careful, functions like ddtb_wrapper.convert expect 0-indexed level.
+    print(f"args: {args}")
+
+    modes = json.loads(args.modes)
+    for i,mode in enumerate(modes):
+        if mode==-1:
+            modes[i] = None
+    sizes = json.loads(args.sizes)
+    label_levels = json.loads(args.label_levels)   #these are not zero-indexed! Careful, functions like ddtb_wrapper.convert expect 0-indexed level.
 
     for dataset in datasets:
         for mode in modes:

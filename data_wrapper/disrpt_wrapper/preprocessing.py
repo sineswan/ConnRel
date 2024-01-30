@@ -2,6 +2,7 @@ import argparse, json, os, csv
 import codecs
 import data_wrapper.disrpt_wrapper.disrpt_to_connrel_converter as disrpt_wrapper
 import data_wrapper.disrpt_wrapper.ddtb_to_connrel_converter as ddtb_wrapper
+import data_wrapper.disrpt_wrapper.resources as disrpt_resources
 
 def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_size, ddtb_input):
 
@@ -18,7 +19,8 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     trees = None
     final_relation_connective_mapping = None
     context_index = None
-    if ddtb_input:
+    if ddtb_input and \
+        disrpt_dataset in disrpt_resources.ddtb_dataset_file_extensions.keys(): # reality check, is a dep dataset?
         trees = ddtb_wrapper.read_ddtb_trees(ddtb_input=ddtb_input, dataset_name=disrpt_dataset)
 
         # finds candidate connectives for relations empirically
@@ -62,7 +64,8 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         for relation in relations[data_split_key]:
             corrected = None
             # Check if this is a ddtb style set and we have the DDTB source files
-            if disrpt_dataset.find(".dep.") and ddtb_input and context_mode==1:
+            if disrpt_dataset.find(".dep.")>-1 and ddtb_input and context_mode==1:
+                print(f"dataset: {disrpt_dataset}")
                 corrected = ddtb_wrapper.convert(relation, context_index=context_index[data_split_key],
                                                  context_mode=context_mode, context_size=context_size,
                                                  _filtered_conns=final_relation_connective_mapping,

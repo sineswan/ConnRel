@@ -91,6 +91,7 @@ def convert(relation, context_index=None,  context_mode=None,
     return result
 
 def read_ddtb_trees(ddtb_input, dataset_name):
+
     trees = {
         "dev":{},
         "train":{},
