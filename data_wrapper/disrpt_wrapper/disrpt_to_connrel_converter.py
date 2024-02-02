@@ -45,7 +45,17 @@ def read_disrpt_rels(filename):
     #Read the relations
     if os.path.exists(filename):
         with open(filename, encoding="utf-8") as file:
-            csv_reader = csv.DictReader(file, delimiter="\t", quoting=csv.QUOTE_ALL)
+
+            #read in all the lines, and fix any \t" (tab followed by double quote) errors
+            data_lines = file.readlines()
+            corrected_lines = []
+            for line in data_lines:
+                corrected_line = line.replace("\t\"", "\t\\\"")
+                # if corrected_line != line:
+                #     print(f"corrected line: {corrected_line}")
+                corrected_lines.append(corrected_line)
+
+            csv_reader = csv.DictReader(corrected_lines, delimiter="\t", quoting=csv.QUOTE_ALL)
             for row in csv_reader:
                 id = f"{row['doc']}.{row['unit1_toks']}.{row['unit2_toks']}"
                 # print(f"id: {id}")
