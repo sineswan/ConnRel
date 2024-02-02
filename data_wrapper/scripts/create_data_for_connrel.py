@@ -23,7 +23,7 @@ template = """#! /usr/bin/env bash
 
 . activate ConnRel_icedeep
 
-cd ~/work/code/wei-liu/ConnRel
+cd ~/work/code/stephen-wan/ConnRel
 
 
 
@@ -58,10 +58,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     datasets = [
-        "eng.dep.covdtb",
-        "eng.dep.scidtb",
-        "eng.rst.gum"
-    ]
+        "eng.dep.scidtb"
+        ]
+    #     "eng.dep.covdtb",
+    #     "eng.dep.scidtb",
+    #     "eng.rst.gum"
+    # ]
 
     print(f"args: {args}")
 

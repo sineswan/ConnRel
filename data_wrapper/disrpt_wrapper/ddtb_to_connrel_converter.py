@@ -28,6 +28,7 @@ def convert(relation, context_index=None,  context_mode=None,
 
     """
     result = disrpt_wrapper.convert(relation, context_mode, context_size, label_level)
+    id = f"{relation['doc']}.{relation['unit1_toks']}.{relation['unit2_toks']}"
     arg1 = relation["unit1_txt"]
     arg2 = relation["unit1_txt"]
     label = relation["label"]
@@ -58,10 +59,10 @@ def convert(relation, context_index=None,  context_mode=None,
                                 context = context_record["text"]
                             break
                     if context == "": #still empty
-                        print(f"WARNING: missing context for {id}, arg1: {arg1}")
+                        print(f"WARNING: Empty context for {id}, arg1: {arg1}")
                 if not context: #context is a None
                     context = ""
-                    print(f"WARNING: empty context for {id}, arg1: {arg1}")
+                    print(f"WARNING: None context (setting to empty string)  for {id}, arg1: {arg1}")
 
                 result["arg1"] = context + " ... " + arg1
                 result["context"] = context
@@ -73,7 +74,7 @@ def convert(relation, context_index=None,  context_mode=None,
             filtered_conns = _filtered_conns
             if dataset_name in manual_filtered_conns.keys():
                 filtered_conns = manual_filtered_conns[dataset_name]
-                print(f"Using manual filtered connectives mapping for {dataset_name}")
+                # print(f"Using manual filtered connectives mapping for {dataset_name}")
             if label in filtered_conns.keys():      #need to parameterise filtered_conns
                 # print(f"DEBUG: found label: {label}")
                 if conn in filtered_conns[label].keys():
@@ -86,6 +87,12 @@ def convert(relation, context_index=None,  context_mode=None,
             else:
                 print(f"WARNING: Missing label: {label}")
                 conn = "and"
+
+            if conn==None or conn=="":
+                print(f"ERROR!: Conn: {conn}")
+            else:
+                print(f"Conn: {conn}")
+
             result["conn"] = conn
 
     return result

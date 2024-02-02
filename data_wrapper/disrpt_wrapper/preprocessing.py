@@ -36,6 +36,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     #--------------------------------------------
     #read in disrpt relations (data points)
     #--------------------------------------------
+    print(f"Processing relations.")
     disrpt_dir_structure = disrpt_wrapper.get_disrpt_dir_structure(disrpt_dataset)
 
     relations = {}
@@ -49,8 +50,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         relations[data_split_key] = rels
         docs_data[data_split_key] = docs
 
-    #write data to disk
-
+    #convert data and write data to disk
     for data_split_key in relations.keys():
         # read in the conllu files to get org text
         filename = disrpt_dir_structure["conllu"][data_split_key]
@@ -65,7 +65,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
             corrected = None
             # Check if this is a ddtb style set and we have the DDTB source files
             if disrpt_dataset.find(".dep.")>-1 and ddtb_input and context_mode==1:
-                print(f"dataset: {disrpt_dataset}")
+                # print(f"dataset: {disrpt_dataset}")
                 corrected = ddtb_wrapper.convert(relation, context_index=context_index[data_split_key],
                                                  context_mode=context_mode, context_size=context_size,
                                                  _filtered_conns=final_relation_connective_mapping,
@@ -83,6 +83,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
             for datum in output_data:
                 output_file.write(json.dumps(datum)+"\n")
 
+    #print labels
     with open(os.path.join(data_final_output, "labels_level_1.txt"), "w") as output_file:
         for label in label_set:
             output_file.write(label+"\n")
