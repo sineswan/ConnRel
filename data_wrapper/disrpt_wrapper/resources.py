@@ -562,9 +562,163 @@ scidtb_filtered_connectives = \
    }
 }
 
+covdtb_filtered_connectives = \
+{
+   "elaboration": {
+      "that": 67,
+      "the": 38,
+      "which": 38,
+      "in": 34,
+      "such": 27,
+      "and": 26,
+      "to": 19,
+      "including": 19,
+      "of": 17,
+      "who": 11,
+      "we": 10,
+      "as": 8,
+      "associated": 8,
+      "related": 7,
+      "where": 6,
+      "a": 6,
+      "reported": 5,
+      "for": 5,
+      "aged": 5,
+      "this": 4,
+      "they": 4,
+      "involved": 4,
+      "regarding": 4,
+      "among": 4,
+      "i.e.": 4,
+      "born": 4,
+      "showing": 3,
+      "ranging": 3,
+      "obtained": 3,
+      "extracted": 3,
+      "clinical": 3,
+      "there": 3,
+      "published": 3,
+      "presented": 3,
+      "used": 3,
+      "cleaved": 3,
+      "dics": 3,
+      "provided": 3,
+      "interestingly": 3,
+      "involving": 2,
+      "with": 2,
+      "how": 2,
+      "furthermore": 2,
+      "two": 2,
+      "comparing": 2,
+      "comprising": 2,
+      "representing": 2,
+      "called": 2,
+      "affecting": 2,
+      "carrying": 2,
+      "at": 2,
+      "occupied": 2,
+      "produced": 2,
+      "these": 2,
+      "further": 2,
+      "some": 2,
+      "employed": 2,
+      "corresponding": 2,
+      "using": 2,
+      "essential": 2,
+      "containing": 2,
+      "since": 2,
+      "taken": 2,
+      "initiated": 2,
+      "encoding": 2,
+      "not": 2,
+      "moreover": 2,
+      "respondents": 2,
+      "severe": 2,
+      "specifically": 2,
+      "several": 2,
+      "depending": 2,
+      "three": 2,
+      "after": 2,
+      "concerning": 2,
+      "hospitalized": 2,
+      "named": 2,
+      "immunized": 2
+   },
+   "enablement": {
+      "to": 122,
+      "for": 17,
+      "that": 4,
+      "which": 3,
+      "in": 3,
+      "aimed": 3
+   },
+   "manner-means": {
+      "using": 33,
+      "by": 15
+   },
+   "cause-result": {
+      "due": 10,
+      "which": 9,
+      "and": 9,
+      "because": 4,
+      "resulting": 4,
+      "leading": 4,
+      "as": 3,
+      "based": 3,
+      "hence": 3,
+      "caused": 2,
+      "that": 2,
+      "causing": 2
+   },
+   "condition": {
+      "if": 5
+   },
+   "comparison": {
+      "but": 25,
+      "compared": 9,
+      "however": 8,
+      "while": 6,
+      "whereas": 4,
+      "although": 3,
+      "in": 2,
+      "the": 2
+   },
+   "root": {
+      "in": 7,
+      "this": 7,
+      "the": 5,
+      "we": 4
+   },
+   "joint": {
+      "and": 113,
+      "but": 3,
+      "or": 3,
+      "as": 2
+   },
+   "textual-organization": {
+      #manual: following https://aclanthology.org/2022.tacl-1.8.pdf, mapping to elaboration
+      "that": 9999
+   },
+   "findings": {
+      "the": 3
+   },
+   "temporal": {
+      "when": 2,
+      "following": 2,
+      "as": 2,
+      "followed": 2
+   },
+   "background": {
+      # manual, using data from scidtb
+      "based": 9999,
+   }
+}
+
 
 filtered_connectives = {
-   "eng.dep.scidtb":scidtb_filtered_connectives
+   "eng.dep.scidtb":scidtb_filtered_connectives,
+   "eng.dep.covdtb":covdtb_filtered_connectives,
+   "general":scidtb_filtered_connectives,
 }
 
 

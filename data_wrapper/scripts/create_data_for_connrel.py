@@ -57,6 +57,7 @@ if __name__ == "__main__":
     parser.add_argument("--modes", default="[-1, 1,3]", help="json string of list of modes e.g., None, 1,2,3")
     parser.add_argument("--sizes", default="[1]", help="json string of list of sizes e.g., 1,2,3")
     parser.add_argument("--label_levels", default="[1]", help="json string of list of label level 1,2,3")
+    parser.add_argument("--dataset", default=None, help="Name of data set to generate, EMPTY/NONE means generate all")
     args = parser.parse_args()
 
     datasets = [
@@ -64,6 +65,8 @@ if __name__ == "__main__":
         "eng.dep.scidtb",
         "eng.rst.gum"
     ]
+    if args.dataset:
+        datasets = [args.dataset]
 
     print(f"args: {args}")
 

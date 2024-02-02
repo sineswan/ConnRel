@@ -85,13 +85,25 @@ def convert(relation, context_index=None,  context_mode=None,
                     #keep arg2 as it is
                     conn = pick_conn(label, filtered_conns)
             else:
-                print(f"WARNING: Missing label: {label}")
-                conn = "and"
+                #Try the "generic" filtered connectives in the manual resource
+                general_filtered_conns = manual_filtered_conns["general"]
+                if label in general_filtered_conns.keys():
+                    if conn in general_filtered_conns[label].keys():
+                        # this conn is in the vetted list, so use it, and pop it from arg2 (==alt_arg2)
+                        result["arg2"] = alt_arg2
+                    else:
+                        # this conn is NOT in vetted list, pick another from the vetted list
+                        # keep arg2 as it is
+                        conn = pick_conn(label, general_filtered_conns)
+                else:
+                    print(f"WARNING: Missing label: {label}")
+                    conn = "and"
 
             if conn==None or conn=="":
-                print(f"ERROR!: Conn: {conn}")
-            else:
-                print(f"Conn: {conn}")
+                print(f"ERROR!: Conn: {conn}, relation: {relation}")
+                conn = "and"
+            # else:
+            #     print(f"Conn: {conn}")
 
             result["conn"] = conn
 
