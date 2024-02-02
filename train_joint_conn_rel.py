@@ -72,9 +72,10 @@ def get_argparse():
 
     #SW: adding parameter to control truncation side.  Needed if padding with context.
     parser.add_argument("--truncation_side_right", default=1, type=int, help="1 if we truncate the end of string")
-    parser.add_argument("--write_file", default=True, type=bool, help="1 if we write predictions to file")
+    parser.add_argument("--write_file", default=True, action="store_true", help="if we write predictions to file")
     parser.add_argument("--write_filestub", default="", type=str, help="filestub for predictions/model")
     parser.add_argument("--load_checkpoint", default=1, type=int, help="checkpoint to load if do_dev or do_test")
+    parser.add_argument("--save_model", default=False, action="store_true", help="set to true to save model: WARNING can use up disk quota")
 
     return parser
 
@@ -216,8 +217,9 @@ def train(model, args, train_dataset, dev_dataset, test_dataset, conn_list, labe
         # output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(os.path.join(args.output_dir, args.write_filestub), "model")
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
-        # os.makedirs(output_dir, exist_ok=True)
-        # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+        if args.save_model:
+            os.makedirs(output_dir, exist_ok=True)
+            torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
 
     print(" Best dev: epoch=%d, acc=%.4f, f1=%.4f"%(
         best_dev_epoch, res_list[best_dev_epoch-1][0], res_list[best_dev_epoch-1][1])
