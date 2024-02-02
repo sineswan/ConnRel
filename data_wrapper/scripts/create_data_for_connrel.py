@@ -60,12 +60,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     datasets = [
-        "eng.dep.scidtb"
-        ]
-    #     "eng.dep.covdtb",
-    #     "eng.dep.scidtb",
-    #     "eng.rst.gum"
-    # ]
+        "eng.dep.covdtb",
+        "eng.dep.scidtb",
+        "eng.rst.gum"
+    ]
 
     print(f"args: {args}")
 
