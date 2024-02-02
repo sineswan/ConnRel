@@ -1,4 +1,5 @@
 import argparse, json, csv, os
+import math
 
 
 def get_disrpt_dir_structure(disrpt_subdataset):
@@ -21,23 +22,116 @@ def get_disrpt_dir_structure(disrpt_subdataset):
     }
     return disrpt_dir_structure
 
-def fixes(id):
-    if id == f"GUM_bio_byron.190-193.194-198,203-217":
-        return {
-            "doc":"GUM_bio_byron",
-            "unit1_toks":"190-193",
-            "unit2_toks":"194-198,203-217",
-            "unit1_txt":"His mother wrote ,",
-            "unit2_txt":"\" He has no indisposition <*> but love , desperate love , the worst of all maladies in my opinion .",
-            "s1_toks":"190-234",
-            "s2_toks":"190-234",
-            "unit1_sent":"His mother wrote , \" He has no indisposition that I know of but love , desperate love , the worst of all maladies in my opinion . In short , the boy is distractedly in love with Miss Chaworth . \" [ 6 ]",
-            "unit2_sent":"His mother wrote , \" He has no indisposition that I know of but love , desperate love , the worst of all maladies in my opinion . In short , the boy is distractedly in love with Miss Chaworth . \" [ 6 ]",
-            "dir":"1>2",
-            "orig_label":"attribution-positive",
-            "label":"attribution-positive"
-        }
-    return None
+def make_dep_node(datum):
+
+    processed_ids = []      #ordering matters
+    # fix commas, single num offset
+    for id_string in [datum["unit2_toks"],datum["unit1_toks"]]:
+        processed_result = None
+        if "," in id_string:
+            spans = id_string.split(",")
+            first_start = spans[0]  #assume no "-" to initialise
+            if "-" in spans[0]:
+                first_start, _ = spans[0].split("-")
+            last_end = spans[-1]
+            if "-" in spans[-1]:
+                _, last_end = spans[-1].split("-")
+            processed_result = "{:04d}".format(int(first_start))+"-"+"{:04d}".format(int(last_end))
+        elif "-" in id_string:
+            # not multiples spans but could have offsets
+
+            offsets = id_string.split("-")
+            processed_result = "{:04d}".format(int(offsets[0])) + "-" + "{:04d}".format(int(offsets[1]))
+        else:
+            #not "-" in id_string and not "," in id_string:
+            processed_result = "{:04d}".format(int(id_string))+"-"+"{:04d}".format(int(id_string))
+        processed_ids.append(processed_result)
+
+    node_id = processed_ids[0]  #for code above, it's the first element
+    parent_id = processed_ids[1] #for code above, it's the second element
+    node = {
+        "id": node_id,
+        "parent": parent_id,
+        "text": datum["unit2_txt"],
+        "relation": datum["label"]
+    }
+
+    parent_node = {
+        "id": parent_id,
+        "parent": 0,
+        "text": datum["unit1_txt"],
+        "comment": "originally linked to ROOT",
+        "relation": "ROOT"
+    }
+
+    return node, parent_node
+
+def make_doc_node_list(nodes, possible_parents):
+    missing_parents_count = 0
+    found_parents_count = 0
+
+    #check dep structure for missing parents
+    missing_parents = {}
+    for node_id in nodes.keys():
+        node = nodes[node_id]
+        parent_id = node["parent"]
+        if not parent_id  in nodes.keys():
+            # print(f"Missing parent: {parent_id}")
+            missing_parents_count += 1
+
+            default_parent = possible_parents[parent_id]
+            parent_id_parts = parent_id.split("-")  #should only be 2 given the processing in make_dep_node()
+            parent_start = int(parent_id_parts[0])
+            parent_end = int(parent_id_parts[1])
+
+            #see if we can update the grandparent information
+            candidate_gparents = {}
+            FLAG_found_grandparent = False
+            for g_node_id in nodes.keys():
+                g_node = nodes[g_node_id]
+                node_id_parts = g_node_id.split("-")  #should only be 2 given the processing in make_dep_node()
+                g_node_start = int(node_id_parts[0])
+                g_node_end = int(node_id_parts[1])
+                if parent_start >= g_node_start and parent_end <= g_node_end:       #so parent is subsumed by gnode
+                    # print(f"found missing parent: {g_node_id}")
+                    FLAG_found_grandparent = True
+
+                    a_score = abs(parent_start-g_node_start) + abs(parent_end-g_node_end)
+                    if not a_score in candidate_gparents.keys():
+                        candidate_gparents[a_score] = {}
+                    candidate_gparents[a_score][g_node_start] = g_node
+
+            if FLAG_found_grandparent:
+                found_parents_count += 1
+
+                #find best candidate parent (minimal span diff)
+                best_score = min(candidate_gparents.keys())
+                best_gparent_start = min(candidate_gparents[best_score].keys())
+                best_gparent = candidate_gparents[best_score][best_gparent_start]
+                default_parent["parent"] = best_gparent["parent"]
+                default_parent["relation"] = best_gparent["relation"]
+
+            missing_parents[parent_id] = default_parent
+    #
+    # print(f"Doc missing parents: {missing_parents_count}")
+    # print(f"Doc found parents: {found_parents_count},{found_parents_count/missing_parents_count*100}%")
+    # lost_count = missing_parents_count - found_parents_count
+    # print(f"Doc lost parents: {lost_count},{lost_count/missing_parents_count*100}%")
+
+    #now merge nodes and missing parents
+    all_nodes = {**nodes, **missing_parents}        #union of dicts (should be disjoint given processing above)
+
+    tree = {"root":[]}
+
+    for node_id in sorted(all_nodes.keys()):
+        tree["root"].append(all_nodes[node_id])
+
+    stats = {
+        "found_parents_count":found_parents_count,
+        "missing_parents_count":missing_parents_count
+    }
+
+    return tree, stats
 
 def read_disrpt_rels(filename):
     # open .tsv file
@@ -59,17 +153,20 @@ def read_disrpt_rels(filename):
             for row in csv_reader:
                 id = f"{row['doc']}.{row['unit1_toks']}.{row['unit2_toks']}"
                 # print(f"id: {id}")
-                fixed = fixes(id)
-                if fixed:
-                    data.append(fixed)
-                else:
-                    # print(row)
-                    data.append(row)
+                # print(row)
+                data.append(row)
 
-    #Read the full text
+    #Read the full text and also build up a dep node record
     docs = {}  #key=doc_id, val=[{"sent":<str>, "id":<str>} ... ]
     sentences_tmp = {} #key=start_pos, val=sentence
+    nodes_tmp = {} #key=node id, value =node (following the scidtb json structure)
+    possible_parents_tmp = {}   #key=node id, value =node (following the scidtb json structure)
     last_doc_id = None
+
+    #variables for inferring dependency structure
+    trees = {}  #key=doc_id, val:dict (following scidtb json structure)
+    missing_parents_count = 0
+    found_parents_count = 0
     for datum in data:
         doc_id = datum["doc"]
 
@@ -82,11 +179,28 @@ def read_disrpt_rels(filename):
             docs[last_doc_id] = sentences
             sentences_tmp = {}
 
+            #handle nodes for this doc
+            tree, stats = make_doc_node_list(nodes_tmp, possible_parents_tmp)
+
+            # print(f"nodes_tmp.keys: {nodes_tmp.keys()}")
+            # print(f"possible_parents_tmp.keys: {possible_parents_tmp.keys()}")
+            # print(f"Tree: {json.dumps(tree, indent=3)}")
+
+            trees[doc_id] = tree
+            nodes_tmp = {}
+            possible_parents_tmp = {}
+            missing_parents_count += stats["missing_parents_count"]
+            found_parents_count += stats["found_parents_count"]
+
         last_doc_id = doc_id
         sentence1 = datum["unit1_sent"]
         sentence2 = datum["unit2_sent"]
         sent1_start_str = datum["s1_toks"].split("-")[0]
         sent2_start_str = datum["s2_toks"].split("-")[0]
+        node, parent_node = make_dep_node(datum)
+        nodes_tmp[node["id"]] = node
+        possible_parents_tmp[parent_node["id"]] = parent_node
+
         # print(f"doc_id: {doc_id}, sent1_pos: {sent1_start_str}, sent2_pos: {sent2_start_str}")
 
         try:
@@ -108,7 +222,16 @@ def read_disrpt_rels(filename):
                               "id": f"{last_doc_id}." + "{:03d}".format(sent_start)})
         docs[last_doc_id] = sentences
 
-    return data, docs
+        # handle nodes for this doc
+        trees[last_doc_id] = make_doc_node_list(nodes_tmp, possible_parents_tmp)
+
+
+    print(f"Total missing parents: {missing_parents_count},  {missing_parents_count/len(data)*100}%")
+    print(f"Total found parents: {found_parents_count},{found_parents_count/missing_parents_count*100}%")
+    lost_count = missing_parents_count - found_parents_count
+    print(f"Total lost parents: {lost_count},{lost_count/missing_parents_count*100}%")
+    print(f"Total relations: {len(data)}")
+    return data, docs, trees
 
 def read_disrpt_connllu_for_raw_text(filename):
     docs = {} #key=doc_id, value= [ {"sent":<str>, "id":<str>} ... ]

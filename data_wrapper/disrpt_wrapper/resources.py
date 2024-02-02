@@ -724,5 +724,6 @@ filtered_connectives = {
 
 ddtb_dataset_file_extensions = {
    "eng.dep.scidtb":".edu.txt.dep",
-   "eng.dep.covdtb":".dep"
+   "eng.dep.covdtb":".dep",
+   "eng.rst.gum": ""
 }
