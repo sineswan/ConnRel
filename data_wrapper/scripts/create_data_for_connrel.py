@@ -25,7 +25,7 @@ template = """#! /usr/bin/env bash
 
 cd ~/work/code/stephen-wan/ConnRel
 
-
+rm __HOME____DATALOC__/__DATASET__/fine/connectives_with_threshold*.txt
 
 for seed in 106524 106464 106537 219539 430683 420201 421052 250120 521002 105202
 do
