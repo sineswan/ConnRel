@@ -81,7 +81,7 @@ def convert(relation, context_index=None,  context_mode=None,
 
                 modified_arg1 = context + " ... " + arg1
                 if context_mode==1.1:    #use only context relationship
-                    modified_arg1 = context_rel_type + " ... " + arg1
+                    modified_arg1 = f"[{context_rel_type}]" + " ... " + arg1
                 elif context_mode==1.2:  #use both context string AND (prepended) context relationship
                     modified_arg1 = f"[{context_rel_type}] {modified_arg1}"
                 result["arg1"] = modified_arg1
