@@ -16,22 +16,15 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     #--------------------------------------------
     #read in the ddtb trees if they exist
     #--------------------------------------------
-    trees = None
+    trees = {}
     final_relation_connective_mapping = None
     context_index = None
+    FLAG_ddtb_tree_data_exists = False
     if ddtb_input and \
-        disrpt_dataset in disrpt_resources.ddtb_dataset_file_extensions.keys(): # reality check, is a dep dataset?
+        disrpt_dataset in disrpt_resources.ddtb_datasets.keys(): # reality check, is a dep dataset?
         trees = ddtb_wrapper.read_ddtb_trees(ddtb_input=ddtb_input, dataset_name=disrpt_dataset)
-
-        # finds candidate connectives for relations empirically
-        final_relation_connective_mapping = ddtb_wrapper.analyse_trees_for_relation_connectives_mappings(trees)
-        connective_mapping_str = f"{json.dumps(final_relation_connective_mapping, indent=3)}"
-        print(connective_mapping_str)
-
-        with open(os.path.join(data_final_output, "final_relation_connective_mapping.json"), "w") as output_file:
-            output_file.write(connective_mapping_str)
-
-        context_index = ddtb_wrapper.create_context_indices(trees, context_mode=context_mode)
+        print(f"Using DDTB dependency data")
+        FLAG_ddtb_tree_data_exists = True
 
     #--------------------------------------------
     #read in disrpt relations (data points)
@@ -42,15 +35,28 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     relations = {}
     label_set = []
     docs_data = {}
-    trees_data = {}
+
     for data_split_key in disrpt_dir_structure["rels"].keys():
         pathway = disrpt_dir_structure["rels"][data_split_key]
         full_pathway = os.path.join(disrpt_input, pathway)
         # print(f"reading DISRPT rel data: {full_pathway}")
-        rels, docs, trees = disrpt_wrapper.read_disrpt_rels(full_pathway)
+        rels, docs, trees_data = disrpt_wrapper.read_disrpt_rels(full_pathway)
         relations[data_split_key] = rels
         docs_data[data_split_key] = docs
-        trees_data[data_split_key] = trees
+        if not FLAG_ddtb_tree_data_exists:
+            trees[data_split_key] = trees_data
+
+    #--------------------------------------------
+    # Process the trees, whereever they came from (DDTB or DISRPT rel data)
+    #--------------------------------------------
+    # finds candidate connectives for relations empirically
+    final_relation_connective_mapping = ddtb_wrapper.analyse_trees_for_relation_connectives_mappings(trees)
+    connective_mapping_str = f"{json.dumps(final_relation_connective_mapping, indent=3)}"
+    # print(connective_mapping_str)
+
+    with open(os.path.join(data_final_output, "final_relation_connective_mapping.json"), "w") as output_file:
+        output_file.write(connective_mapping_str)
+    context_index = ddtb_wrapper.create_context_indices(trees, context_mode=context_mode)
 
     #convert data and write data to disk
     for data_split_key in relations.keys():
@@ -63,24 +69,22 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
 
         # print(f"data_split: {data_split_key}")
         output_data = []
-        for relation in relations[data_split_key]:
+        for i, relation in enumerate(relations[data_split_key]):
             corrected = None
             # Check if this is a ddtb style set and we have the DDTB source files
             if context_mode==1:
-                if disrpt_dataset.find(".dep.")>-1 and ddtb_input:
-                    # print(f"dataset: {disrpt_dataset}")
-                    corrected = ddtb_wrapper.convert(relation, context_index=context_index[data_split_key],
-                                                     context_mode=context_mode, context_size=context_size,
-                                                     _filtered_conns=final_relation_connective_mapping,
-                                                     dataset_name=disrpt_dataset)
-                else:
-                    #use trees built from disrpt REL data
-                    print(f"trees key: {trees_data[data_split_key].keys()}")
+                # if disrpt_dataset.find(".dep.")>-1 and ddtb_input:
+                #     # print(f"dataset: {disrpt_dataset}")
+                #     corrected = ddtb_wrapper.convert(relation, context_index=context_index[data_split_key],
+                #                                      context_mode=context_mode, context_size=context_size,
+                #                                      _filtered_conns=final_relation_connective_mapping,
+                #                                      dataset_name=disrpt_dataset)
+                # else:
 
-                    corrected = ddtb_wrapper.convert(relation, context_index=trees_data[data_split_key],
-                                                     context_mode=context_mode, context_size=context_size,
-                                                     _filtered_conns=final_relation_connective_mapping,
-                                                     dataset_name=disrpt_dataset)
+                corrected = ddtb_wrapper.convert(relation, context_index=context_index[data_split_key],
+                                                 context_mode=context_mode, context_size=context_size,
+                                                 _filtered_conns=final_relation_connective_mapping,
+                                                 dataset_name=disrpt_dataset)
 
             else:
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],

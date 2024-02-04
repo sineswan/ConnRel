@@ -721,8 +721,14 @@ filtered_connectives = {
    "general":scidtb_filtered_connectives,
 }
 
+#Need this dict to define which data sets are pure DDTB ones (so we use any provided DDTB data)
+#TO DO: add references?
+ddtb_datasets = {
+   "eng.dep.scidtb": "Science DTB",
+   "eng.dep.covdtb": "Covid DTB",
+}
 
-ddtb_dataset_file_extensions = {
+dataset_file_extensions = {
    "eng.dep.scidtb":".edu.txt.dep",
    "eng.dep.covdtb":".dep",
    "eng.rst.gum": ""

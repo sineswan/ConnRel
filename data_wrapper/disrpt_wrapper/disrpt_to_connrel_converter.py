@@ -1,7 +1,6 @@
 import argparse, json, csv, os
 import math
 
-
 def get_disrpt_dir_structure(disrpt_subdataset):
     disrpt_dir_structure = {
         "tokens": {
@@ -53,16 +52,24 @@ def make_dep_node(datum):
         "id": node_id,
         "parent": parent_id,
         "text": datum["unit2_txt"],
-        "relation": datum["label"]
+        "relation": datum["label"],
+        "doc": datum["doc"]
     }
 
     parent_node = {
         "id": parent_id,
-        "parent": 0,
+        "parent": "0000-0000",
         "text": datum["unit1_txt"],
         "comment": "originally linked to ROOT",
-        "relation": "ROOT"
+        "relation": "ROOT",
+        "doc": datum["doc"]
     }
+
+    # for an_id_str in [node_id, parent_id]:
+    #     if not "-" in an_id_str:
+    #         print(f"ERROR in id creation. Node: {json.dumps(node, indent=3)}")
+    #         print(f"ERROR in id creation. Parent: {json.dumps(parent_node, indent=3)}")
+    #         1/0
 
     return node, parent_node
 
@@ -121,10 +128,30 @@ def make_doc_node_list(nodes, possible_parents):
     #now merge nodes and missing parents
     all_nodes = {**nodes, **missing_parents}        #union of dicts (should be disjoint given processing above)
 
-    tree = {"root":[]}
+    tree = {"root":[
+        {
+            "id": 0,
+            "parent": -1,
+            "text": "ROOT",
+            "relation": "null"
+        }
+    ]}
 
-    for node_id in sorted(all_nodes.keys()):
-        tree["root"].append(all_nodes[node_id])
+    #give node numbers to nodes
+    node_id_index = {"0000-0000":0}         #zero is the root
+    for i,node_id in enumerate(sorted(all_nodes.keys())):
+        node_id_index[node_id] = i+1        #zero is the root, so increment: +1
+
+    #adjust node record for new node ids
+    for i, node_id in enumerate(sorted(all_nodes.keys())):
+        a_node = all_nodes[node_id]
+        parent_span = a_node["parent"]
+        a_node["span"] = node_id
+        a_node["parent_span"] = parent_span
+        a_node["id"] = node_id_index[node_id]
+        new_parent_id = node_id_index[parent_span]
+        a_node["parent"] = new_parent_id
+        tree["root"].append(a_node)
 
     stats = {
         "found_parents_count":found_parents_count,
@@ -136,8 +163,13 @@ def make_doc_node_list(nodes, possible_parents):
 def read_disrpt_rels(filename):
     # open .tsv file
     data = []
+    docs = {}  #key=doc_id, val=[{"sent":<str>, "id":<str>} ... ]
+    trees = {}  #key=doc_id, val:dict (following scidtb json structure)
+
     #Read the relations
-    if os.path.exists(filename):
+    if not os.path.exists(filename):
+        return data, docs, trees
+    else:
         with open(filename, encoding="utf-8") as file:
 
             #read in all the lines, and fix any \t" (tab followed by double quote) errors
@@ -157,20 +189,18 @@ def read_disrpt_rels(filename):
                 data.append(row)
 
     #Read the full text and also build up a dep node record
-    docs = {}  #key=doc_id, val=[{"sent":<str>, "id":<str>} ... ]
     sentences_tmp = {} #key=start_pos, val=sentence
     nodes_tmp = {} #key=node id, value =node (following the scidtb json structure)
     possible_parents_tmp = {}   #key=node id, value =node (following the scidtb json structure)
-    last_doc_id = None
+    last_doc_id = ""
 
     #variables for inferring dependency structure
-    trees = {}  #key=doc_id, val:dict (following scidtb json structure)
     missing_parents_count = 0
     found_parents_count = 0
     for datum in data:
         doc_id = datum["doc"]
 
-        if last_doc_id and not doc_id == last_doc_id:
+        if not doc_id == last_doc_id:
             #change in doc_id, so store the last document
             sentences = []
             for sent_start in sorted(sentences_tmp.keys()):
@@ -181,12 +211,7 @@ def read_disrpt_rels(filename):
 
             #handle nodes for this doc
             tree, stats = make_doc_node_list(nodes_tmp, possible_parents_tmp)
-
-            # print(f"nodes_tmp.keys: {nodes_tmp.keys()}")
-            # print(f"possible_parents_tmp.keys: {possible_parents_tmp.keys()}")
-            # print(f"Tree: {json.dumps(tree, indent=3)}")
-
-            trees[doc_id] = tree
+            trees[last_doc_id] = tree
             nodes_tmp = {}
             possible_parents_tmp = {}
             missing_parents_count += stats["missing_parents_count"]
@@ -222,9 +247,11 @@ def read_disrpt_rels(filename):
                               "id": f"{last_doc_id}." + "{:03d}".format(sent_start)})
         docs[last_doc_id] = sentences
 
-        # handle nodes for this doc
-        trees[last_doc_id] = make_doc_node_list(nodes_tmp, possible_parents_tmp)
-
+        # handle nodes for this LAST doc
+        tree, stats = make_doc_node_list(nodes_tmp, possible_parents_tmp)
+        trees[last_doc_id] = tree
+        missing_parents_count += stats["missing_parents_count"]
+        found_parents_count += stats["found_parents_count"]
 
     print(f"Total missing parents: {missing_parents_count},  {missing_parents_count/len(data)*100}%")
     print(f"Total found parents: {found_parents_count},{found_parents_count/missing_parents_count*100}%")
@@ -273,11 +300,11 @@ def read_disrpt_connllu_for_raw_text(filename):
     return docs
 
 def get_first_word(string):
-    first_word = string.lower().split(" ")[0]  # take first word, make lowercase
+    first_word = string.split(" ")[0]  # take first word
     return  first_word
 
 def get_tail(string):
-    return " ".join(string.lower().split(" ")[1:])  # remove first word, make lowercase
+    return " ".join(string.split(" ")[1:])  # remove first word
 
 def convert(relation,  relations, raw_texts,
             context_mode=None, context_size=1, label_level=0):
@@ -286,9 +313,9 @@ def convert(relation,  relations, raw_texts,
 
     arg1 = relation["unit1_txt"]
     arg2 = relation["unit2_txt"]
-    if relation["dir"] == "1>2":
-        arg1 = relation["unit2_txt"]
-        arg2 = relation["unit1_txt"]
+    # if relation["dir"] == "1>2":
+    #     arg1 = relation["unit2_txt"]
+    #     arg2 = relation["unit1_txt"]
     # print(id)
 
     #initialise final record
