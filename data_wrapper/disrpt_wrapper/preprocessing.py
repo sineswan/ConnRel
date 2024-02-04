@@ -56,7 +56,9 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
 
     with open(os.path.join(data_final_output, "final_relation_connective_mapping.json"), "w") as output_file:
         output_file.write(connective_mapping_str)
-    context_index = ddtb_wrapper.create_context_indices(trees, context_mode=context_mode)
+    context_index = None
+    if context_mode:
+        context_index = ddtb_wrapper.create_context_indices(trees, context_mode=context_mode)
 
     #convert data and write data to disk
     for data_split_key in relations.keys():
@@ -72,7 +74,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         for i, relation in enumerate(relations[data_split_key]):
             corrected = None
             # Check if this is a ddtb style set and we have the DDTB source files
-            if context_mode==1:
+            if context_mode and int(context_mode)==1:            #using int() to generalise to major version
                 # if disrpt_dataset.find(".dep.")>-1 and ddtb_input:
                 #     # print(f"dataset: {disrpt_dataset}")
                 #     corrected = ddtb_wrapper.convert(relation, context_index=context_index[data_split_key],

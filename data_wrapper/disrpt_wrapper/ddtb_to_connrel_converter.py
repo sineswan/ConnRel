@@ -39,12 +39,13 @@ def convert(relation, context_index=None,  context_mode=None,
 
     #find context
     if context_mode:
-        if context_mode==1:
+        if int(context_mode)==1:        #using int() to generalise to the major mode type
             context_record = None
             provenance = None
             if context_index:
                 an_index = context_index[filename+dataset_fileext]
                 context = ""
+                context_rel_type = ""
 
                 #Modification 2024.02.04: adding filter to remove self relation
                 rejected = None
@@ -58,6 +59,7 @@ def convert(relation, context_index=None,  context_mode=None,
                         # Modification 2024.02.04: adding filter to remove self relation
                         if not candidate.strip() == arg2.strip():
                             context == candidate
+                            context_rel_type = provenance["self"]["relation"]
                         else:
                             rejected = context_record
                             print(f"Data[{id}]: rejecting context as self: {rejected}")
@@ -71,12 +73,18 @@ def convert(relation, context_index=None,  context_mode=None,
                             if context_record:
                                 if not context_record == rejected:
                                     context = context_record["text"]
+                                    context_rel_type = provenance["self"]["relation"]
                                     print(f"Data[{id}]: fuzzy match: {context}")
                                     break
                     if context == "": #still empty
                         print(f"WARNING: Empty context for {id}, arg1: {arg1}")
 
-                result["arg1"] = context + " ... " + arg1
+                modified_arg1 = context + " ... " + arg1
+                if context_mode==1.1:    #use only context relationship
+                    modified_arg1 = context_rel_type + " ... " + arg1
+                elif context_mode==1.2:  #use both context string AND (prepended) context relationship
+                    modified_arg1 = f"[{context_rel_type}] {modified_arg1}"
+                result["arg1"] = modified_arg1
                 result["context"] = context
                 result["context_provenance"] = provenance
 
@@ -197,7 +205,7 @@ def create_context_indices(trees, context_mode=1):
                 parent_edge_id = edge["parent"]
 
                 context = None
-                if context_mode==1:
+                if int(context_mode)==1:        #using int() to generalise from minor variations in context inference
                     if parent_edge_id > -1:     #this currently doesn't do anything, since -1 isn't used, 0 is actual root
                         context = edge_lookup[parent_edge_id]
                         context["text"] = context["text"].replace("<S>", "")
