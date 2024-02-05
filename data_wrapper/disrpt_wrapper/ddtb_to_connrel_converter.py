@@ -33,6 +33,9 @@ def convert(relation, context_index=None,  context_mode=None,
     id = f"{relation['doc']}.{relation['unit1_toks']}.{relation['unit2_toks']}"
     arg1 = relation["unit1_txt"]
     arg2 = relation["unit2_txt"]
+    if relation["dir"] == "1>2":
+        arg1 = relation["unit2_txt"]
+        arg2 = relation["unit1_txt"]
     label = relation["label"]
     filename = relation["doc"]
     dataset_fileext = dataset_file_extensions[dataset_name]

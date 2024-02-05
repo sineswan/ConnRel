@@ -313,9 +313,9 @@ def convert(relation,  relations, raw_texts,
 
     arg1 = relation["unit1_txt"]
     arg2 = relation["unit2_txt"]
-    # if relation["dir"] == "1>2":
-    #     arg1 = relation["unit2_txt"]
-    #     arg2 = relation["unit1_txt"]
+    if relation["dir"] == "1>2":
+        arg1 = relation["unit2_txt"]
+        arg2 = relation["unit1_txt"]
     # print(id)
 
     #initialise final record
@@ -362,8 +362,15 @@ def convert(relation,  relations, raw_texts,
             # 0/1  #hack to debug
         else:
             context = ""
+            max_context = context_size
+            if cursor - max_context < 0:
+                max_context = cursor    # so the first offset will end up being the array start, or 0
             if cursor>0 and cursor<len(sentences):
-                context = sentences[cursor - 1]["sent"]
+                context_array = sentences[cursor - max_context:cursor]
+                context_sentences = []
+                for element in context_array:
+                    context_sentences.append(element["sent"])
+                context = " ".join(context_sentences)
             result["arg1"] = context + " ... " + arg1
             result["context"] = context
             provenance = sentences
