@@ -27,7 +27,7 @@ cd ~/work/code/stephen-wan/ConnRel
 
 rm __HOME____DATALOC__/__DATASET__/fine/connectives_with_threshold*.txt
 
-for seed in 106524 106464 106537 219539 430683 420201 421052 250120 521002 105202
+for seed in __SEEDS__
 do
     time python3 train_joint_conn_rel.py --do_train \\
                                     --dataset=__DATASET__ \\
@@ -55,9 +55,10 @@ if __name__ == "__main__":
     parser.add_argument("--output", required=True)
     parser.add_argument("--home", default="")
     parser.add_argument("--modes", default="[-1, 1, 1.1, 1.2, 3]", help="json string of list of modes e.g., None, 1,2,3")
-    parser.add_argument("--sizes", default="[1]", help="json string of list of sizes e.g., 1,2,3")
+    parser.add_argument("--sizes", default="[1,2]", help="json string of list of sizes e.g., 1,2,3")
     parser.add_argument("--label_levels", default="[1]", help="json string of list of label level 1,2,3")
     parser.add_argument("--dataset", default=None, help="Name of data set to generate, EMPTY/NONE means generate all")
+    parser.add_argument("--seed_count", default=10, type=int, help="number of seeds to use (ie number of trials in slurm)")
     args = parser.parse_args()
 
     datasets = [
@@ -85,6 +86,8 @@ if __name__ == "__main__":
                     dataloc, data_name = prep.process_dataset(args.disrpt_input, dataset, args.output,
                                                               mode, size, ddtb_input=args.ddtb_input)
 
+                    seeds = [106524, 106464, 106537, 219539, 430683, 420201, 421052, 250120, 521002, 105202]
+                    seed_str = " ".join([str(i) for i in seeds[:args.seed_count]])
                     slurm_script = template
                     slurm_script = slurm_script.replace("__DATALOC__", dataloc)
                     slurm_script = slurm_script.replace("__DATASET__", data_name)
@@ -92,6 +95,7 @@ if __name__ == "__main__":
                     slurm_script = slurm_script.replace("__SIZE__", str(size))
                     slurm_script = slurm_script.replace("__LABEL_LEVEL__", str(label_level))
                     slurm_script = slurm_script.replace("__HOME__", args.home)
+                    slurm_script = slurm_script.replace("__SEEDS__", seed_str)
 
                     slurm_script_dir = os.path.join(args.output, "slurm")
                     os.makedirs(slurm_script_dir, exist_ok=True)
