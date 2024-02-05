@@ -19,6 +19,11 @@ def get_disrpt_dir_structure(disrpt_subdataset):
             "train": f"{disrpt_subdataset}/{disrpt_subdataset}_train.rels"
         }
     }
+
+    #Exceptions
+    if disrpt_subdataset=="eng.dep.covdtb":
+        disrpt_dir_structure["rels"]["train"] = f"{disrpt_subdataset}/{disrpt_subdataset}_dev.rels"
+
     return disrpt_dir_structure
 
 def make_dep_node(datum):

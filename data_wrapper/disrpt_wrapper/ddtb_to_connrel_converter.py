@@ -156,7 +156,7 @@ def read_ddtb_trees(ddtb_input, dataset_name):
         ddtb_dir_structure = {
             "dev": f"{dataset_name}/dev",
             "test": f"{dataset_name}/test",
-            "train": None
+            "train": f"{dataset_name}/dev"
         }
 
     for data_split_key in trees.keys():

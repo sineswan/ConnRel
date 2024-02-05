@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--ddtb_input", default=None)
     parser.add_argument("--output", required=True)
     parser.add_argument("--home", default="")
-    parser.add_argument("--modes", default="[-1, 1, 1.1, 1.2, 3]", help="json string of list of modes e.g., None, 1,2,3")
+    parser.add_argument("--modes", default="[-1, 1, 3]", help="json string of list of modes e.g., None, 1,2,3")
     parser.add_argument("--sizes", default="[1,2,3,4,5]", help="json string of list of sizes e.g., 1,2,3")
     parser.add_argument("--label_levels", default="[1]", help="json string of list of label level 1,2,3")
     parser.add_argument("--dataset", default=None, help="Name of data set to generate, EMPTY/NONE means generate all")
@@ -80,7 +80,10 @@ if __name__ == "__main__":
 
     for dataset in datasets:
         for mode in modes:
-            for size in sizes:
+            target_sizes = sizes
+            if not mode:
+                target_sizes = [0]
+            for size in target_sizes:
                 for label_level in label_levels:
                     print(f"Processing: {dataset} for mode: {mode} size: {size}")
                     dataloc, data_name = prep.process_dataset(args.disrpt_input, dataset, args.output,
