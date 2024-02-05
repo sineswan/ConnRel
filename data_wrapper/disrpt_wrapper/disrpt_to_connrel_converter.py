@@ -333,7 +333,8 @@ def convert(relation,  relations, raw_texts,
         "arg1_org_len": len(arg1),
         "context_mode": context_mode,
         "context_size": context_size,
-        "context_provenance": None
+        "context_provenance": None,
+        "doc": relation["doc"]
     }
     corrected_label = relation["label"]
     if corrected_label:

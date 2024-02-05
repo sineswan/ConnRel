@@ -55,13 +55,13 @@ def convert(relation, context_index=None,  context_mode=None,
                 arg1_key_target = arg1.strip()
                 if arg1_key_target in an_index.keys():
                     provenance = an_index[arg1_key_target]
-                    context_record = provenance["context"][0]
-                    if context_record:
+                    max_context_size = min(context_size, len(provenance["context"]))
+                    for context_record in provenance["context"][:max_context_size]:
                         candidate = context_record["text"]
 
                         # Modification 2024.02.04: adding filter to remove self relation
                         if not candidate.strip() == arg2.strip():
-                            context == candidate
+                            context = candidate+" "+context
                             context_rel_type = provenance["self"]["relation"]
                         else:
                             rejected = context_record
@@ -69,16 +69,19 @@ def convert(relation, context_index=None,  context_mode=None,
 
                 if context=="":
                     # no exact match, have to use fuzzy matching
+                    FLAG_keep_searching = True
                     for key in an_index.keys():
+                        if not FLAG_keep_searching:
+                            break
                         if arg1_key_target.startswith(key) or key.startswith(arg1_key_target):
                             provenance = an_index[key]
-                            context_record = provenance["context"][0]
-                            if context_record:
+                            max_context_size = min(context_size, len(provenance["context"]))
+                            for context_record in provenance["context"][:max_context_size]:
                                 if not context_record == rejected:
-                                    context = context_record["text"]
+                                    context =  context_record["text"]+" "+context
                                     context_rel_type = provenance["self"]["relation"]
                                     print(f"Data[{id}]: fuzzy match: {context}")
-                                    break
+                                    FLAG_keep_searching = False
                     if context == "": #still empty
                         print(f"WARNING: Empty context for {id}, arg1: {arg1}")
 
@@ -173,7 +176,7 @@ def read_ddtb_dep_file(filename):
     return json.loads(file_contents)
 
 
-def create_context_indices(trees, context_mode=1):
+def create_context_indices(trees, context_mode=1, context_size=1):
     """
     Args:
         trees:
@@ -208,16 +211,19 @@ def create_context_indices(trees, context_mode=1):
                 parent_edge_id = edge["parent"]
 
                 context = None
-                if int(context_mode)==1:        #using int() to generalise from minor variations in context inference
-                    if parent_edge_id > -1:     #this currently doesn't do anything, since -1 isn't used, 0 is actual root
-                        context = edge_lookup[parent_edge_id]
-                        context["text"] = context["text"].replace("<S>", "")
-                # elif context_mode==3:
-                #     if edge_id > 1:
-                #         prev_id = edge_id - 1
-                #         context = edge_lookup[prev_id]
+                # if int(context_mode)==1:        #using int() to generalise from minor variations in context inference
+                #     if parent_edge_id > -1:     #this currently doesn't do anything, since -1 isn't used, 0 is actual root
+                #         context = edge_lookup[parent_edge_id]
+                #         context["text"] = context["text"].replace("<S>", "")
 
-                reverse_index[text] = {"self":edge, "context":[context]}
+                context = []
+                while parent_edge_id > 0:
+                    context_node = edge_lookup[parent_edge_id]
+                    context_node["text"] = context_node["text"].replace("<S>", "")
+                    context.append(context_node)
+                    parent_edge_id = context_node["parent"]
+
+                reverse_index[text] = {"self":edge, "context":context}
             index[data_split_key][filename] = reverse_index
 
     return index
