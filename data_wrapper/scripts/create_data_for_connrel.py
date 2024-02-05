@@ -55,7 +55,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", required=True)
     parser.add_argument("--home", default="")
     parser.add_argument("--modes", default="[-1, 1, 1.1, 1.2, 3]", help="json string of list of modes e.g., None, 1,2,3")
-    parser.add_argument("--sizes", default="[1,2]", help="json string of list of sizes e.g., 1,2,3")
+    parser.add_argument("--sizes", default="[1,2,3,4,5]", help="json string of list of sizes e.g., 1,2,3")
     parser.add_argument("--label_levels", default="[1]", help="json string of list of label level 1,2,3")
     parser.add_argument("--dataset", default=None, help="Name of data set to generate, EMPTY/NONE means generate all")
     parser.add_argument("--seed_count", default=10, type=int, help="number of seeds to use (ie number of trials in slurm)")
