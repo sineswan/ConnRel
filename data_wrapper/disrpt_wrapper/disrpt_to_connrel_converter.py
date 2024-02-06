@@ -173,6 +173,8 @@ def read_disrpt_rels(filename):
 
     #Read the relations
     if not os.path.exists(filename):
+        print(f"WARNING file not found: {filename}")
+
         return data, docs, trees
     else:
         with open(filename, encoding="utf-8") as file:
@@ -329,7 +331,7 @@ def convert(relation,  relations, raw_texts,
         "relation_class": None,
         "arg1": arg1,
         "arg1_org": arg1,
-        "arg2": get_tail(arg2),
+        "arg2": arg2,
         "conn": get_first_word(arg2),
         "arg2_org": arg2,
         "relation_type": "Implicit",
@@ -365,7 +367,7 @@ def convert(relation,  relations, raw_texts,
                 break   #assume 1 match only
         if not matched_sentence:
             print(f"Didn't find match for {doc_id} {arg1_sentence}")
-            # 0/1  #hack to debug
+
         else:
             context = ""
             max_context = context_size

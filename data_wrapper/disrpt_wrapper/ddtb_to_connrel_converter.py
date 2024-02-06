@@ -52,7 +52,7 @@ def convert(relation, context_index=None,  context_mode=None,
 
                 #Modification 2024.02.04: adding filter to remove self relation
                 rejected = None
-                arg1_key_target = arg1.strip()
+                arg1_key_target = clean_con_idx_key(arg1)
                 if arg1_key_target in an_index.keys():
                     provenance = an_index[arg1_key_target]
                     max_context_size = min(context_size, len(provenance["context"]))
@@ -106,6 +106,7 @@ def convert(relation, context_index=None,  context_mode=None,
                 if conn.lower() in filtered_conns[label].keys():
                     #this conn is in the vetted list, so use it, and pop it from arg2 (==alt_arg2)
                     result["arg2"] = alt_arg2
+                    # pass
                 else:
                     #this conn is NOT in vetted list, pick another from the vetted list
                     #keep arg2 as it is
@@ -175,6 +176,8 @@ def read_ddtb_dep_file(filename):
     # print(f"File_contents: {file_contents}")
     return json.loads(file_contents)
 
+def clean_con_idx_key(text):
+    return text.replace("<S>", "").strip()
 
 def create_context_indices(trees, context_mode=1, context_size=1):
     """
@@ -206,8 +209,7 @@ def create_context_indices(trees, context_mode=1, context_size=1):
                 #     edge_id = int(edge["id"].replace("-", ""))
                 # else:
                 edge_id = int(edge["id"])
-                edge["text"] = edge["text"].replace("<S>", "").strip()
-                text = edge["text"]
+                text = clean_con_idx_key(edge["text"])
                 parent_edge_id = edge["parent"]
 
                 context = None
@@ -217,9 +219,9 @@ def create_context_indices(trees, context_mode=1, context_size=1):
                 #         context["text"] = context["text"].replace("<S>", "")
 
                 context = []
-                while parent_edge_id > 0:
+                while parent_edge_id > -1:
                     context_node = edge_lookup[parent_edge_id]
-                    context_node["text"] = context_node["text"].replace("<S>", "")
+                    # context_node["text"] = context_node["text"].replace("<S>", "")
                     context.append(context_node)
                     parent_edge_id = context_node["parent"]
 

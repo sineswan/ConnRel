@@ -61,6 +61,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         context_index = ddtb_wrapper.create_context_indices(trees, context_mode=context_mode)
 
     #convert data and write data to disk
+    printed_docids = []
     for data_split_key in relations.keys():
         # read in the conllu files to get org text
         filename = disrpt_dir_structure["conllu"][data_split_key]
@@ -100,6 +101,25 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         with open(os.path.join(data_final_output, data_split_key+".json"), "w") as output_file:
             for datum in output_data:
                 output_file.write(json.dumps(datum)+"\n")
+
+        #write raw text (from REL data) as CSV files
+        #header needs to be the fields expected by Jeon's code, in future make this generic
+        csv_data_output_filename = f"{data_split_key}.csv"
+        csv_data_output_path = os.path.join(data_final_output, csv_data_output_filename )
+        with open(csv_data_output_path, 'w', newline='') as csvfile:
+            fieldnames = ['essay_id', 'prompt', 'native_lang', 'essay_score', 'essay']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for datum in output_data:
+                doc_id = datum["doc"]
+                print(f"doc_id for saving to csv: {doc_id}, test_cond{doc_id in printed_docids} ")
+                if not doc_id in printed_docids:
+                    printed_docids.append(doc_id)
+                    #write row for this file
+                    doc = raw_texts[doc_id]
+                    doc_text = [s['sent'] for s in doc]
+                    writer.writerow({'essay_id':doc_id, 'prompt':1, 'native_lang': "ENG", 'essay_score': 1, 'essay':" ".join(doc_text) })
 
     #print labels
     with open(os.path.join(data_final_output, "labels_level_1.txt"), "w") as output_file:
