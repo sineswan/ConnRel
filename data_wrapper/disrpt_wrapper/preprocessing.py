@@ -61,7 +61,6 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         context_index = ddtb_wrapper.create_context_indices(trees, context_mode=context_mode)
 
     #convert data and write data to disk
-    printed_docids = []
     for data_split_key in relations.keys():
         # read in the conllu files to get org text
         filename = disrpt_dir_structure["conllu"][data_split_key]
@@ -72,6 +71,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
 
         # print(f"data_split: {data_split_key}")
         output_data = []
+        saved_docids = []   #putting this inside the data_split loop because some data sets share dev==train split
         for i, relation in enumerate(relations[data_split_key]):
             corrected = None
             # Check if this is a ddtb style set and we have the DDTB source files
@@ -104,18 +104,17 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
 
         #write raw text (from REL data) as CSV files
         #header needs to be the fields expected by Jeon's code, in future make this generic
-        csv_data_output_filename = f"{data_split_key}.csv"
+        csv_data_output_filename = f"{data_split_key}.jeon.csv"
         csv_data_output_path = os.path.join(data_final_output, csv_data_output_filename )
-        with open(csv_data_output_path, 'w', newline='') as csvfile:
+        with open(csv_data_output_path, 'w', newline='', encoding="utf-8") as csvfile:
             fieldnames = ['essay_id', 'prompt', 'native_lang', 'essay_score', 'essay']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
             for datum in output_data:
                 doc_id = datum["doc"]
-                print(f"doc_id for saving to csv: {doc_id}, test_cond{doc_id in printed_docids} ")
-                if not doc_id in printed_docids:
-                    printed_docids.append(doc_id)
+                if not doc_id in saved_docids:
+                    saved_docids.append(doc_id)
                     #write row for this file
                     doc = raw_texts[doc_id]
                     doc_text = [s['sent'] for s in doc]
