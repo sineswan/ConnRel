@@ -2,6 +2,7 @@ import argparse, os
 import json
 
 import data_wrapper.disrpt_wrapper.preprocessing as prep
+from data_wrapper.jeon_discourse_segment_data_wrapper import JeonSegmentReader
 
 template = """#! /usr/bin/env bash
 #BATCH --job-name=WANSN-ConnRel-__DATASET__-__MODE__-__SIZE__
@@ -59,6 +60,10 @@ if __name__ == "__main__":
     parser.add_argument("--label_levels", default="[1]", help="json string of list of label level 1,2,3")
     parser.add_argument("--dataset", default=None, help="Name of data set to generate, EMPTY/NONE means generate all")
     parser.add_argument("--seed_count", default=10, type=int, help="number of seeds to use (ie number of trials in slurm)")
+    parser.add_argument("--jeon_discourse_segments", default=None, help="Segments determined by Jeon EMNLP 2020")
+    parser.add_argument("--jeon_sentence_segments", default=None, help="Sentence segments determined by Jeon EMNLP 2020")
+    parser.add_argument("--jeon_docid_mapping", default=None, help="Optional: docid mapping to original source docIDs (for Jeon EMNLP 2020 data). Needed if the original IDs were not int-like.")
+
     args = parser.parse_args()
 
     datasets = [
@@ -78,16 +83,28 @@ if __name__ == "__main__":
     sizes = json.loads(args.sizes)
     label_levels = json.loads(args.label_levels)   #these are not zero-indexed! Careful, functions like ddtb_wrapper.convert expect 0-indexed level.
 
+
+    jeon_segment_reader = None
+    if args.jeon_sentence_segments and args.jeon_discourse_segments:
+        jeon_segment_reader = JeonSegmentReader(sentence_segment_filename=args.jeon_sentence_segments,
+                                                discourse_segments_filename=args.jeon_discourse_segments,
+                                                docid_mappings=args.jeon_docid_mapping)
+
     for dataset in datasets:
         for mode in modes:
             target_sizes = sizes
             if not mode:
                 target_sizes = [0]
+
+            if mode==2 and not jeon_segment_reader:
+                continue    #we can only do mode2 if there is Jeon data.
+
             for size in target_sizes:
                 for label_level in label_levels:
                     print(f"Processing: {dataset} for mode: {mode} size: {size}")
                     dataloc, data_name = prep.process_dataset(args.disrpt_input, dataset, args.output,
-                                                              mode, size, ddtb_input=args.ddtb_input)
+                                                              mode, size, ddtb_input=args.ddtb_input,
+                                                              jeon_segment_reader=jeon_segment_reader)
 
                     seeds = [106524, 106464, 106537, 219539, 430683, 420201, 421052, 250120, 521002, 105202]
                     seed_str = " ".join([str(i) for i in seeds[:args.seed_count]])

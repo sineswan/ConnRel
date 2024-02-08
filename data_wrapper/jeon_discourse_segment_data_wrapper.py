@@ -2,15 +2,19 @@ import csv, argparse, json, ast
 
 class JeonSegmentReader:
 
-    def __init__(self, sentence_segment_filename, discourse_segments_filename):
+    def __init__(self, sentence_segment_filename, discourse_segments_filename, docid_mappings=None):
         self.sentences_filename = sentence_segment_filename
         self.discourse_segments_filename = discourse_segments_filename
         self.sentences = None
         self.discourse_segments = None
         self.discourse_segments_inverted_index = None
 
-        self.sentences = self.reader_sentences(sentence_segment_filename)
-        self.discourse_segments = self.reader_discourse_segments(discourse_segments_filename)
+        self.docid_mappings = None
+        if docid_mappings:
+            self.docid_mappings = json.load(open(docid_mappings))
+
+        self.sentences = self.reader_sentences(sentence_segment_filename, self.docid_mappings)
+        self.discourse_segments = self.reader_discourse_segments(discourse_segments_filename, self.docid_mappings)
         self.cleanup()  #needed to repair discourse segments if segment data is missing
 
         #create discourse segment inverted index
@@ -48,7 +52,7 @@ class JeonSegmentReader:
                     new_sent_ids.append(sent_id)
                 self.discourse_segments[key] = {"segments": new_segments, "sent_ids": new_sent_ids}
 
-    def reader_sentences(self, sentence_segment_filename):
+    def reader_sentences(self, sentence_segment_filename, id_mapping=None):
 
         result = {}  #key:id, value={"num_sents":<d>, "sentences":[list of string] .... }
         with open(sentence_segment_filename) as csv_file:
@@ -56,6 +60,9 @@ class JeonSegmentReader:
             line_count = 0
             for row in csv_reader:
                 id = f"{int(row[0]):04d}"  #interpet string as number in 4 digits but finally as STRING
+                if id_mapping:
+                    id = id_mapping[str(int(id))]        #mapping ids are numbers as strings with no leading zeros
+
                 num_sents = int(row[1])
                 sentences = ast.literal_eval(row[2])
                 result[id] = {"num_sents":num_sents, "sentences":sentences}
@@ -64,7 +71,7 @@ class JeonSegmentReader:
         return result
 
 
-    def reader_discourse_segments(self, discourse_segments_filename):
+    def reader_discourse_segments(self, discourse_segments_filename, id_mapping=None):
 
         result = {}  #key:doc_id, value={"segments": {seg_id:[list of sent_ids] .... }, "sent_ids": [list of nums] }
         with open(discourse_segments_filename) as csv_file:
@@ -72,6 +79,8 @@ class JeonSegmentReader:
             line_count = 0
             for row in csv_reader:
                 id = f"{int(row[0]):04d}"  #interpet string as number in 4 digits but finally as STRING
+                if id_mapping:
+                    id = id_mapping[str(int(id))]        #mapping ids are numbers as strings with no leading zeros
                 segments_stringified = row[2]  #skip info in cols 1,3
 
                 # print(f"segment_string: {segments_stringified}")

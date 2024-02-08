@@ -3,8 +3,11 @@ import codecs
 import data_wrapper.disrpt_wrapper.disrpt_to_connrel_converter as disrpt_wrapper
 import data_wrapper.disrpt_wrapper.ddtb_to_connrel_converter as ddtb_wrapper
 import data_wrapper.disrpt_wrapper.resources as disrpt_resources
+from data_wrapper.context_manager_joen import ContextManagerJoen
 
-def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_size, ddtb_input):
+
+def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_size, ddtb_input,
+                    jeon_segment_reader=None):
 
     #prepare variables/directories for output
     data_set_dirname = disrpt_dataset.replace(".", "_")
@@ -61,7 +64,8 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         context_index = ddtb_wrapper.create_context_indices(trees, context_mode=context_mode)
 
     #convert data and write data to disk
-    for data_split_key in relations.keys():
+    saved_docid_mapping = {}  # need to transform docids to unique ints. This saves mapping for the JEON data
+    for d, data_split_key in enumerate(relations.keys()):
         # read in the conllu files to get org text
         filename = disrpt_dir_structure["conllu"][data_split_key]
         # raw_texts = disrpt_wrapper.read_disrpt_connllu_for_raw_text(os.path.join(disrpt_input, filename))
@@ -88,7 +92,15 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                                                  context_mode=context_mode, context_size=context_size,
                                                  _filtered_conns=final_relation_connective_mapping,
                                                  dataset_name=disrpt_dataset)
-
+            elif context_mode and context_mode==2:
+                context_manager = ContextManagerJoen(jeon_segment_reader)
+                corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
+                                                   raw_texts=raw_texts,
+                                                   context_mode=context_mode, context_size=context_size)
+                doc_id = corrected["doc"]
+                arg1 = corrected["arg1"]
+                corrected = context_manager.add_context_single_datapoint(doc_id=doc_id, annotation=corrected, arg1=arg1,
+                                                             context_mode=context_mode)
             else:
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
                                                    raw_texts=raw_texts,
@@ -106,8 +118,10 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
         #header needs to be the fields expected by Jeon's code, in future make this generic
         csv_data_output_filename = f"{data_split_key}.jeon.csv"
         csv_data_output_path = os.path.join(data_final_output, csv_data_output_filename )
+
         with open(csv_data_output_path, 'w', newline='', encoding="utf-8") as csvfile:
             fieldnames = ['essay_id', 'prompt', 'native_lang', 'essay_score', 'essay']
+            #essay_ids need to be some kind of int.
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
@@ -115,15 +129,19 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                 doc_id = datum["doc"]
                 if not doc_id in saved_docids:
                     saved_docids.append(doc_id)
+                    new_id = d*10000+len(saved_docids)      #use data split as leading offset, assume <10k docs per split
+                    saved_docid_mapping[new_id] = doc_id
                     #write row for this file
                     doc = raw_texts[doc_id]
                     doc_text = [s['sent'] for s in doc]
-                    writer.writerow({'essay_id':doc_id, 'prompt':1, 'native_lang': "ENG", 'essay_score': 1, 'essay':" ".join(doc_text) })
+                    writer.writerow({'essay_id':new_id, 'prompt':1, 'native_lang': "ENG", 'essay_score': 1, 'essay':" ".join(doc_text) })
 
     #print labels
     with open(os.path.join(data_final_output, "labels_level_1.txt"), "w") as output_file:
         for label in label_set:
             output_file.write(label+"\n")
+    with open(os.path.join(data_final_output, "docid_mapping_jeon.json"), "w") as output_file:
+        output_file.write(json.dumps(saved_docid_mapping, indent=3))
 
     return data_mode_dir, data_set_dirname
 
