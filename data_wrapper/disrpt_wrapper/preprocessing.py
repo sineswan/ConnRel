@@ -108,7 +108,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
 
                 corrected["arg1"] = relation["unit1_txt"]
                 corrected["arg2"] = relation["unit2_txt"]
-                corrected["conn"] = ""
+                corrected["conn"] = "and"
 
             output_data.append(corrected)
             if not corrected["relation_class"] in label_set:
