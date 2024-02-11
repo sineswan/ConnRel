@@ -52,19 +52,25 @@ def convert(relation, context_index=None,  context_mode=None,
 
                 #Modification 2024.02.04: adding filter to remove self relation
                 rejected = None
-                arg1_key_target = clean_con_idx_key(arg1)
-                if arg1_key_target in an_index.keys():
-                    provenance = an_index[arg1_key_target]
+                arg_key_target = clean_con_idx_key(arg1)
+                if relation["dir"] == "1>2":
+                    arg_key_target = clean_con_idx_key(arg2)
+                if arg_key_target in an_index.keys():
+                    provenance = an_index[arg_key_target]
+                    provenance["comment"] = []
                     max_context_size = min(context_size, len(provenance["context"]))
                     for context_record in provenance["context"][:max_context_size]:
                         candidate = context_record["text"]
-
+                        filter_self_text = arg2.strip()
+                        if relation["dir"] == "1>2":
+                            filter_self_text = arg1.strip()
                         # Modification 2024.02.04: adding filter to remove self relation
-                        if not candidate.strip() == arg2.strip():
+                        if not candidate.strip() == filter_self_text:
                             context = candidate+" "+context
                             context_rel_type = provenance["self"]["relation"]
                         else:
                             rejected = context_record
+                            provenance["comment"].append("Rejecting context as self.")
                             print(f"Data[{id}]: rejecting context as self: {rejected}")
 
                 if context=="":
@@ -73,13 +79,15 @@ def convert(relation, context_index=None,  context_mode=None,
                     for key in an_index.keys():
                         if not FLAG_keep_searching:
                             break
-                        if arg1_key_target.startswith(key) or key.startswith(arg1_key_target):
+                        if arg_key_target.startswith(key) or key.startswith(arg_key_target):
                             provenance = an_index[key]
+                            provenance["comment"] = []
                             max_context_size = min(context_size, len(provenance["context"]))
                             for context_record in provenance["context"][:max_context_size]:
                                 if not context_record == rejected:
                                     context =  context_record["text"]+" "+context
                                     context_rel_type = provenance["self"]["relation"]
+                                    provenance["comment"].append("Rejecting context as self.")
                                     print(f"Data[{id}]: fuzzy match: {context}")
                                     FLAG_keep_searching = False
                     if context == "": #still empty
@@ -90,7 +98,7 @@ def convert(relation, context_index=None,  context_mode=None,
                 if context_mode==1.1:    #use only context relationship
                     modified_arg1 = f"[{context_rel_type}]" + " ... " + arg1
                 elif context_mode==1.2:  #use both context string AND (prepended) context relationship
-                    modified_arg1 = f"... f[{context_rel_type}] ... [{disrpt_wrapper.get_first_word(modified_arg1)}] ... {arg1}"
+                    modified_arg1 = f"... [{context_rel_type}] ... [{disrpt_wrapper.get_first_word(modified_arg1)}] ... {arg1}"
                 result["arg1"] = modified_arg1
                 result["context"] = context
                 result["context_provenance"] = provenance
