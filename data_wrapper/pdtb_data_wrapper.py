@@ -1,4 +1,4 @@
-import regex as re
+import re as re
 import json, os
 import logging
 
