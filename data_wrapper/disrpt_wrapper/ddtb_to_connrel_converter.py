@@ -33,9 +33,9 @@ def convert(relation, context_index=None,  context_mode=None,
     id = f"{relation['doc']}.{relation['unit1_toks']}.{relation['unit2_toks']}"
     arg1 = relation["unit1_txt"]
     arg2 = relation["unit2_txt"]
-    if relation["dir"] == "1>2":
-        arg1 = relation["unit2_txt"]
-        arg2 = relation["unit1_txt"]
+    # if relation["dir"] == "1>2":
+    #     arg1 = relation["unit2_txt"]
+    #     arg2 = relation["unit1_txt"]
     label = relation["label"]
     filename = relation["doc"]
     dataset_fileext = dataset_file_extensions[dataset_name]
@@ -85,7 +85,8 @@ def convert(relation, context_index=None,  context_mode=None,
                     if context == "": #still empty
                         print(f"WARNING: Empty context for {id}, arg1: {arg1}")
 
-                modified_arg1 = context + " ... " + arg1
+                # modified_arg1 = context + " ... " + arg1
+                modified_arg1 = " ... " + arg1
                 if context_mode==1.1:    #use only context relationship
                     modified_arg1 = f"[{context_rel_type}]" + " ... " + arg1
                 elif context_mode==1.2:  #use both context string AND (prepended) context relationship
@@ -105,8 +106,8 @@ def convert(relation, context_index=None,  context_mode=None,
                 # print(f"DEBUG: found label: {label}")
                 if conn.lower() in filtered_conns[label].keys():
                     #this conn is in the vetted list, so use it, and pop it from arg2 (==alt_arg2)
-                    result["arg2"] = alt_arg2
-                    # pass
+                    # result["arg2"] = alt_arg2
+                    pass
                 else:
                     #this conn is NOT in vetted list, pick another from the vetted list
                     #keep arg2 as it is
@@ -117,7 +118,8 @@ def convert(relation, context_index=None,  context_mode=None,
                 if label in general_filtered_conns.keys():
                     if conn.lower() in general_filtered_conns[label].keys():
                         # this conn is in the vetted list, so use it, and pop it from arg2 (==alt_arg2)
-                        result["arg2"] = alt_arg2
+                        # result["arg2"] = alt_arg2
+                        pass
                     else:
                         # this conn is NOT in vetted list, pick another from the vetted list
                         # keep arg2 as it is

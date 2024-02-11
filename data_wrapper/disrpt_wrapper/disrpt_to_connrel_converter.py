@@ -320,9 +320,9 @@ def convert(relation,  relations, raw_texts,
 
     arg1 = relation["unit1_txt"]
     arg2 = relation["unit2_txt"]
-    if relation["dir"] == "1>2":
-        arg1 = relation["unit2_txt"]
-        arg2 = relation["unit1_txt"]
+    # if relation["dir"] == "1>2":
+    #     arg1 = relation["unit2_txt"]
+    #     arg2 = relation["unit1_txt"]
     # print(id)
 
     #initialise final record
