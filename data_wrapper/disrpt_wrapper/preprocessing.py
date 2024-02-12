@@ -92,6 +92,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                                                  context_mode=context_mode, context_size=context_size,
                                                  _filtered_conns=final_relation_connective_mapping,
                                                  dataset_name=disrpt_dataset)
+                corrected["conn"] = "[]"
             elif context_mode and context_mode==2:
                 context_manager = ContextManagerJoen(jeon_segment_reader)
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
@@ -101,6 +102,8 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                 arg1 = corrected["arg1"]
                 corrected = context_manager.add_context_single_datapoint(doc_id=doc_id, annotation=corrected, arg1=arg1,
                                                              context_mode=context_mode)
+
+                corrected["conn"] = "[]"
             elif context_mode and context_mode == 3:
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
                                                    raw_texts=raw_texts,
@@ -108,13 +111,35 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                 corrected["conn"] = "[]"
 
 
-            else:
+            elif context_mode and context_mode == 4:
+                #Default case: no context but checking effect of non-connectives
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
                                                    raw_texts=raw_texts,
                                                    context_mode=context_mode, context_size=context_size)
 
                 corrected["arg1"] = " ... "+ relation["unit1_txt"]
                 # corrected["arg2"] = relation["unit2_txt"]
+
+                corrected["conn"] = "[]"
+                first_word_arg2 = disrpt_wrapper.get_first_word(corrected["arg2"])
+                tail_arg2 = disrpt_wrapper.get_tail(corrected["arg2"])
+                FLAG_found_connective = False
+                for connective in disrpt_resources.resource_connectives:
+                    if connective.lower().startswith(first_word_arg2.lower()):
+                        FLAG_found_connective = True
+
+                if not FLAG_found_connective:
+                    #so it's not a connective, strip first word to see its effect on performance
+                    corrected["arg2"] = tail_arg2
+            else:
+                #Default case: no context
+                corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
+                                                   raw_texts=raw_texts,
+                                                   context_mode=context_mode, context_size=context_size)
+
+                corrected["arg1"] = " ... "+ relation["unit1_txt"]
+                # corrected["arg2"] = relation["unit2_txt"]
+
                 corrected["conn"] = "[]"
 
             output_data.append(corrected)
