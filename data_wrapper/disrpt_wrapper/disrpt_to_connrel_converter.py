@@ -345,8 +345,8 @@ def convert(relation,  relations, raw_texts,
     }
     corrected_label = relation["label"]
     if corrected_label:
-        if "-" in corrected_label:
-            corrected_label = corrected_label.split("-")[label_level]
+        # if "-" in corrected_label:
+        #     corrected_label = corrected_label.split("-")[label_level]
         result["relation_class"] = corrected_label
     else:
         result["relation_class"] = "elab"  #hack
