@@ -142,7 +142,7 @@ def get_connectives_with_threshold(data_dir, threshold=0.9):
     idfs = []
     with open(conn_file, "w", encoding="utf-8") as f:
         for con, fre in zip(conns, frequencies):
-            idf = math.log(new_total_num / fre)
+            idf = math.log(new_total_num / (fre+1))
             # idf = 0.0
             idfs.append(idf)
             # print(idf)
