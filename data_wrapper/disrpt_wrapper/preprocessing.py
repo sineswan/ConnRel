@@ -101,6 +101,13 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                 arg1 = corrected["arg1"]
                 corrected = context_manager.add_context_single_datapoint(doc_id=doc_id, annotation=corrected, arg1=arg1,
                                                              context_mode=context_mode)
+            elif context_mode and context_mode == 3:
+                corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
+                                                   raw_texts=raw_texts,
+                                                   context_mode=context_mode, context_size=context_size)
+                corrected["conn"] = "[]"
+
+
             else:
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
                                                    raw_texts=raw_texts,

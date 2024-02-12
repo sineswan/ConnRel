@@ -373,7 +373,11 @@ def convert(relation,  relations, raw_texts,
             max_context = context_size
             if cursor - max_context < 0:
                 max_context = cursor    # so the first offset will end up being the array start, or 0
-            if cursor>0 and cursor<len(sentences):
+
+            metadata = {"cursor":cursor, "arg1sent":arg1_sentence,
+                        "matched_sentence":matched_sentence,
+                        "max_context":max_context}
+            if cursor>=0 and cursor<len(sentences):
                 context_array = sentences[cursor - max_context:cursor]
                 context_sentences = []
                 for element in context_array:
@@ -381,7 +385,7 @@ def convert(relation,  relations, raw_texts,
                 context = " ".join(context_sentences)
             result["arg1"] = context + " ... " + arg1
             result["context"] = context
-            provenance = sentences
+            provenance = {"sentences":sentences, "metadata":metadata}
             result["context_provenance"] = provenance
 
 
