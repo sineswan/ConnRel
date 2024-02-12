@@ -19,6 +19,14 @@ python3 preprocessing
 #or with context: mode 0 (prior text, maximum), mode 1 (gold labelled linked prior text)
 python preprocessing.py --pdtb2_raw_text_dir ../../../data/pdtb_v2_LDC2008T05/pdtb_v2/data/raw/wsj --context_mode 1
 
+#to create data from DISRPT
+#(see data_wrapper/readme.md)
+python ./data_wrapper/scripts/create_data_for_connrel.py --disrpt_input ~/work/data/sharedtask2023-main/data/ --ddtb_input ~/work/data/ddtb_data --output data/dataset --home /home/wansn/work/code/stephen-wan/ConnRel/
+
+#to create jeon data for DISRPT data set
+#1. follow instructions in Stephen's fork of Sungho Jeon's EMNLP2020 code
+2.
+
 ```
 
 **For PDTB 3.0**
