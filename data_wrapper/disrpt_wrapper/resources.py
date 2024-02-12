@@ -115,6 +115,13 @@ discoGEM_explicit_connectives = [
 "yet"
 ]
 
+pdtb_implicit_connectives = ['however', 'and', 'for example', 'although', 'in short', 'rather', 'specifically', 'then', 'also',
+             'in particular', 'because', 'for instance', 'as a result', 'while', 'consequently', 'in other words',
+             'thus', 'furthermore', 'but', 'therefore', 'so', 'in addition', 'indeed', 'since', 'in fact', 'previously',
+             'instead', 'by comparison', 'as', 'that is', 'by contrast', 'meanwhile', '<unk>']
+
+resource_connectives = list(set(discoGEM_explicit_connectives).intersection(set(pdtb_implicit_connectives)))
+
 scidtb_filtered_connectives = \
 {
     #only place where we use "but"
