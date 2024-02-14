@@ -1,5 +1,7 @@
 import argparse, json, os, csv
 import codecs
+import random
+
 import data_wrapper.disrpt_wrapper.disrpt_to_connrel_converter as disrpt_wrapper
 import data_wrapper.disrpt_wrapper.ddtb_to_connrel_converter as ddtb_wrapper
 import data_wrapper.disrpt_wrapper.resources as disrpt_resources
@@ -65,6 +67,10 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
 
     #convert data and write data to disk
     saved_docid_mapping = {}  # need to transform docids to unique ints. This saves mapping for the JEON data
+    stats = {}
+    for d, data_split_key in enumerate(relations.keys()):
+        stats[data_split_key] = {}
+
     for d, data_split_key in enumerate(relations.keys()):
         # read in the conllu files to get org text
         filename = disrpt_dir_structure["conllu"][data_split_key]
@@ -111,7 +117,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                 corrected["conn"] = "[]"
 
 
-            elif context_mode and context_mode == 4:
+            elif context_mode and int(context_mode) == 4:
                 #Default case: no context but checking effect of non-connectives
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
                                                    raw_texts=raw_texts,
@@ -122,15 +128,32 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
 
                 corrected["conn"] = "[]"
                 first_word_arg2 = disrpt_wrapper.get_first_word(corrected["arg2"])
-                tail_arg2 = disrpt_wrapper.get_tail(corrected["arg2"])
+                arg2 = corrected["arg2"]
+                tail_arg2 = disrpt_wrapper.get_tail(arg2)
                 FLAG_found_connective = False
                 for connective in disrpt_resources.resource_connectives:
                     if connective.lower().startswith(first_word_arg2.lower()):
                         FLAG_found_connective = True
 
-                if not FLAG_found_connective:
-                    #so it's not a connective, strip first word to see its effect on performance
-                    corrected["arg2"] = tail_arg2
+                if context_mode==4:
+                    if not FLAG_found_connective:
+                        #so it's not a connective, strip first word to see its effect on performance
+                        corrected["arg2"] = tail_arg2
+                        if context_mode not in stats[data_split_key].keys():
+                            stats[data_split_key][context_mode] = 0
+                        stats[data_split_key][context_mode] += 1
+
+                elif context_mode==4.1:
+                    if FLAG_found_connective:
+                        #so it's not a connective, strip first word to see its effect on performance
+                        corrected["arg2"] = tail_arg2
+                elif context_mode==4.2:
+                    if not FLAG_found_connective:
+                        #so it's not a connective, strip first word to see its effect on performance
+                        arg2_tokens = arg2.split(" ")
+                        perturbed_arg2 = arg2_tokens.pop(random.randrange(len(arg2_tokens)))
+                        corrected["arg2"] = " ".join(perturbed_arg2)
+
             else:
                 #Default case: no context
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
@@ -178,6 +201,8 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
             output_file.write(label+"\n")
     with open(os.path.join(data_final_output, "docid_mapping_jeon.json"), "w") as output_file:
         output_file.write(json.dumps(saved_docid_mapping, indent=3))
+    with open(os.path.join(data_final_output, "stats.json"), "w") as output_file:
+        output_file.write(json.dumps(stats, indent=3))
 
     return data_mode_dir, data_set_dirname
 
