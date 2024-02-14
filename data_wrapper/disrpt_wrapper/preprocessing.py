@@ -69,7 +69,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     saved_docid_mapping = {}  # need to transform docids to unique ints. This saves mapping for the JEON data
     stats = {}
     for d, data_split_key in enumerate(relations.keys()):
-        stats[data_split_key] = {}
+        stats[data_split_key] = {"labels":{}}
 
     for d, data_split_key in enumerate(relations.keys()):
         # read in the conllu files to get org text
@@ -139,9 +139,15 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                     if not FLAG_found_connective:
                         #so it's not a connective, strip first word to see its effect on performance
                         corrected["arg2"] = tail_arg2
+
+                        #keep track of stats
                         if context_mode not in stats[data_split_key].keys():
-                            stats[data_split_key][context_mode] = 0
-                        stats[data_split_key][context_mode] += 1
+                            stats[data_split_key][context_mode] = {"labels":{}, "total":0}
+                        stats[data_split_key][context_mode]["total"] += 1
+                        a_label = corrected["relation_class"]
+                        if not a_label in stats[data_split_key][context_mode]["labels"].keys():
+                            stats[data_split_key][context_mode]["labels"][a_label] = 0
+                        stats[data_split_key][context_mode]["labels"][a_label] += 1
 
                 elif context_mode==4.1:
                     if FLAG_found_connective:
@@ -151,8 +157,8 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                     if not FLAG_found_connective:
                         #so it's not a connective, strip first word to see its effect on performance
                         arg2_tokens = arg2.split(" ")
-                        perturbed_arg2 = arg2_tokens.pop(random.randrange(len(arg2_tokens)))
-                        corrected["arg2"] = " ".join(perturbed_arg2)
+                        arg2_tokens.pop(random.randrange(len(arg2_tokens)))
+                        corrected["arg2"] = " ".join(arg2_tokens)
 
             else:
                 #Default case: no context
@@ -166,8 +172,12 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                 corrected["conn"] = "[]"
 
             output_data.append(corrected)
-            if not corrected["relation_class"] in label_set:
-                label_set.append(corrected["relation_class"])
+            a_label = corrected["relation_class"]
+            if not a_label in label_set:
+                label_set.append(a_label)
+            if not a_label in stats[data_split_key]["labels"].keys():
+                stats[data_split_key]["labels"][a_label] = 0
+            stats[data_split_key]["labels"][a_label] += 1
 
         with open(os.path.join(data_final_output, data_split_key+".json"), "w") as output_file:
             for datum in output_data:
