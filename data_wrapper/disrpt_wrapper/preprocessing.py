@@ -1,5 +1,5 @@
 import argparse, json, os, csv
-import codecs
+import numpy as np
 import random
 
 import data_wrapper.disrpt_wrapper.disrpt_to_connrel_converter as disrpt_wrapper
@@ -69,7 +69,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     saved_docid_mapping = {}  # need to transform docids to unique ints. This saves mapping for the JEON data
     stats = {}
     for d, data_split_key in enumerate(relations.keys()):
-        stats[data_split_key] = {"labels":{}}
+        stats[data_split_key] = {"labels":{}, context_mode:None}
 
     for d, data_split_key in enumerate(relations.keys()):
         # read in the conllu files to get org text
@@ -99,6 +99,18 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                                                  _filtered_conns=final_relation_connective_mapping,
                                                  dataset_name=disrpt_dataset)
                 corrected["conn"] = "[]"
+                label = corrected["relation_class"]
+                position = None
+                if corrected["context_provenance"]:
+                    position = corrected["context_provenance"]["self"]["id"]
+                if not stats[data_split_key][context_mode]:
+                    stats[data_split_key][context_mode] = {"labels": {}}
+                if position:
+                    if not label in stats[data_split_key][context_mode]["labels"].keys():
+                        stats[data_split_key][context_mode]["labels"][label] = []
+                    stats[data_split_key][context_mode]["labels"][label].append(position)
+
+
             elif context_mode and context_mode==2:
                 context_manager = ContextManagerJoen(jeon_segment_reader)
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
@@ -141,7 +153,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                         corrected["arg2"] = tail_arg2
 
                         #keep track of stats
-                        if context_mode not in stats[data_split_key].keys():
+                        if not stats[data_split_key][context_mode]:
                             stats[data_split_key][context_mode] = {"labels":{}, "total":0}
                         stats[data_split_key][context_mode]["total"] += 1
                         a_label = corrected["relation_class"]
@@ -211,6 +223,32 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
             output_file.write(label+"\n")
     with open(os.path.join(data_final_output, "docid_mapping_jeon.json"), "w") as output_file:
         output_file.write(json.dumps(saved_docid_mapping, indent=3))
+
+
+    #final updating of stats, then print to disk
+    for data_split_key in stats.keys():
+        total_data_points = 0
+        stats[data_split_key][context_mode]["labels_normed"] = {}
+        for label in stats[data_split_key]["labels"]:
+            total_data_points += stats[data_split_key]["labels"][label]
+        for label in stats[data_split_key][context_mode]["labels"]:
+            if context_mode == 4:
+                value = stats[data_split_key][context_mode]["labels"][label]
+                denom = stats[data_split_key]["labels"][label]
+                stats[data_split_key][context_mode]["labels_normed"][label] = [value, denom, value/denom]
+            elif context_mode == 1:
+                values = stats[data_split_key][context_mode]["labels"][label]
+                mean = np.mean(values)
+                stdev = np.std(values)
+                stats[data_split_key][context_mode]["labels_normed"][label] = [mean, stdev]
+
+        if context_mode == 4:
+            stats[data_split_key][context_mode]["total_normed"] = stats[data_split_key][context_mode]["total"]/total_data_points
+        elif context_mode == 1:
+            unsorted_labels = stats[data_split_key][context_mode]["labels_normed"]
+            sorted_labels = {k: v for k, v in sorted(unsorted_labels.items(), key=lambda item: item[1][0])}
+            stats[data_split_key][context_mode]["ordered_labels"] = sorted_labels
+
     with open(os.path.join(data_final_output, "stats.json"), "w") as output_file:
         output_file.write(json.dumps(stats, indent=3))
 
