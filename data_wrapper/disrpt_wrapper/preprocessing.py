@@ -122,6 +122,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
                                                              context_mode=context_mode)
 
                 corrected["conn"] = "[]"
+
             elif context_mode and context_mode == 3:
                 corrected = disrpt_wrapper.convert(relation, relations=relations[data_split_key],
                                                    raw_texts=raw_texts,
@@ -227,6 +228,7 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
 
     #final updating of stats, then print to disk
     for data_split_key in stats.keys():
+        if context_mode == 4 or context_mode == 1:
         total_data_points = 0
         stats[data_split_key][context_mode]["labels_normed"] = {}
         for label in stats[data_split_key]["labels"]:
