@@ -229,27 +229,27 @@ def process_dataset(disrpt_input, disrpt_dataset, output, context_mode, context_
     #final updating of stats, then print to disk
     for data_split_key in stats.keys():
         if context_mode == 4 or context_mode == 1:
-        total_data_points = 0
-        stats[data_split_key][context_mode]["labels_normed"] = {}
-        for label in stats[data_split_key]["labels"]:
-            total_data_points += stats[data_split_key]["labels"][label]
-        for label in stats[data_split_key][context_mode]["labels"]:
-            if context_mode == 4:
-                value = stats[data_split_key][context_mode]["labels"][label]
-                denom = stats[data_split_key]["labels"][label]
-                stats[data_split_key][context_mode]["labels_normed"][label] = [value, denom, value/denom]
-            elif context_mode == 1:
-                values = stats[data_split_key][context_mode]["labels"][label]
-                mean = np.mean(values)
-                stdev = np.std(values)
-                stats[data_split_key][context_mode]["labels_normed"][label] = [mean, stdev]
+            total_data_points = 0
+            stats[data_split_key][context_mode]["labels_normed"] = {}
+            for label in stats[data_split_key]["labels"]:
+                total_data_points += stats[data_split_key]["labels"][label]
+            for label in stats[data_split_key][context_mode]["labels"]:
+                if context_mode == 4:
+                    value = stats[data_split_key][context_mode]["labels"][label]
+                    denom = stats[data_split_key]["labels"][label]
+                    stats[data_split_key][context_mode]["labels_normed"][label] = [value, denom, value/denom]
+                elif context_mode == 1:
+                    values = stats[data_split_key][context_mode]["labels"][label]
+                    mean = np.mean(values)
+                    stdev = np.std(values)
+                    stats[data_split_key][context_mode]["labels_normed"][label] = [mean, stdev]
 
-        if context_mode == 4:
-            stats[data_split_key][context_mode]["total_normed"] = stats[data_split_key][context_mode]["total"]/total_data_points
-        elif context_mode == 1:
-            unsorted_labels = stats[data_split_key][context_mode]["labels_normed"]
-            sorted_labels = {k: v for k, v in sorted(unsorted_labels.items(), key=lambda item: item[1][0])}
-            stats[data_split_key][context_mode]["ordered_labels"] = sorted_labels
+            if context_mode == 4:
+                stats[data_split_key][context_mode]["total_normed"] = stats[data_split_key][context_mode]["total"]/total_data_points
+            elif context_mode == 1:
+                unsorted_labels = stats[data_split_key][context_mode]["labels_normed"]
+                sorted_labels = {k: v for k, v in sorted(unsorted_labels.items(), key=lambda item: item[1][0])}
+                stats[data_split_key][context_mode]["ordered_labels"] = sorted_labels
 
     with open(os.path.join(data_final_output, "stats.json"), "w") as output_file:
         output_file.write(json.dumps(stats, indent=3))
