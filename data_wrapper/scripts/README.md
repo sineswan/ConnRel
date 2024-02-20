@@ -13,6 +13,9 @@ C:\_data\work\code\ConnRel\data\dataset
 --modes="[1]"
 --sizes="[1]"
 --dataset="eng.dep.scidtb"
+
+#e.g.,
+#python ./data_wrapper/scripts/create_data_for_connrel.py --disrpt_input ~/work/data/sharedtask2023-main/data/ --ddtb_input ~/work/data/ddtb_data --output data/dataset --home /home/wansn/work/code/stephen-wan/ConnRel/ --jeon_discourse_segments data/dataset/jeon_segments/eng_dep_covdtb/jeon_discourse_segments.csv --jeon_sentence_segments data/dataset/jeon_segments/eng_dep_covdtb/jeon_sentence_segments.csv --jeon_docid_mapping data/dataset/jeon_segments/eng_dep_covdtb/eng_dep_covdtb.docid_mapping_jeon.json  --modes="[1]" --sizes="[2,3]"
 ```
 
 # Running analysis to compare predictions
