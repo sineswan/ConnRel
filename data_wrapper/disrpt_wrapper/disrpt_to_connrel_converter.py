@@ -307,7 +307,7 @@ def read_disrpt_connllu_for_raw_text(filename):
     return docs
 
 def get_first_word(string):
-    first_word = string.split(" ")[0]  # take first word
+    first_word = string.strip().split(" ")[0]  # take first word
     return  first_word
 
 def get_tail(string):

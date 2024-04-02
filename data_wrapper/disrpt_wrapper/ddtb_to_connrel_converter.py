@@ -245,13 +245,17 @@ def vet_word(word):
         return None
     return word
 
-def analyse_trees_for_relation_connectives_mappings(trees):
+def analyse_trees_for_relation_connectives_mappings(trees, FLAG_consider_test_set=False,
+                                                    FLAG_consider_adjacent_only=True, threshold=1, FLAG_vet_words=True):
 
     print(f"trees keys: {trees.keys()}")
 
     #ANALYSE relation-first_word mappings
+    data_splits = ["dev", "train"]
+    if FLAG_consider_test_set:
+        data_splits.append("test")
     relation_connective_mapping = {}
-    for data_split_key in ["dev", "train"]:
+    for data_split_key in data_splits:
         for filename in trees[data_split_key].keys():
             a_tree = trees[data_split_key][filename]    # dict: { "root": [ <list of dicts> ] }
 
@@ -259,16 +263,21 @@ def analyse_trees_for_relation_connectives_mappings(trees):
 
             edges = a_tree["root"]
             for edge in edges:
+                if FLAG_consider_adjacent_only:
+                    if not int(edge["parent"]) == (
+                            int(edge["id"]) - 1):  # only analyse cases where parent directly precedes
+                        continue
+
                 if edge["text"] == "ROOT":
                     continue    #skip the root edge
-                elif not int(edge["parent"]) == (int(edge["id"]) - 1):  #only analyse cases where parent directly precedes
-                    continue
                 else:
                     relation = edge["relation"].lower()
                     if not relation in relation_connective_mapping.keys():
                         relation_connective_mapping[relation] = {}
                     first_word = edge["text"].lower().split(" ")[0]     #take first word, make lowercase
-                    filtered_word = vet_word(first_word)
+                    filtered_word = first_word
+                    if FLAG_vet_words:
+                        filtered_word = vet_word(first_word)
                     if filtered_word:
                         if filtered_word not in relation_connective_mapping[relation].keys():
                             relation_connective_mapping[relation][filtered_word] = 1
@@ -283,7 +292,7 @@ def analyse_trees_for_relation_connectives_mappings(trees):
         filtered_connectives = {}
         for key  in sorted_hist.keys():
             filter_string = "---"
-            if int(sorted_hist[key]) > 1 :
+            if int(sorted_hist[key]) > threshold :
                 filter_string = ""
                 filtered_connectives[key] = sorted_hist[key]
             # print(f"{relation}: {filter_string} word= {key}, freq= {sorted_hist[key]}")
